@@ -8,6 +8,11 @@ use Illuminate\Database\Eloquent\Collection;
 
 class EloquentAttendanceLogRepository extends BaseRepository implements AttendanceLogRepositoryInterface
 {
+    public function __construct(AttendanceLog $model)
+    {
+        parent::__construct($model);
+    }
+
     public function getDailyStatuses(string $date, ?int $departmentId = null): Collection
     {
         $query = AttendanceLog::with('user')

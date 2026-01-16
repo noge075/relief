@@ -4,7 +4,7 @@
         @include('partials.head')
     </head>
     <body class="min-h-screen bg-white dark:bg-zinc-800">
-        <flux:sidebar sticky collapsible="mobile" class="border-e border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900">
+        <flux:sidebar sticky collapsible="mobile" class="w-72 border-e border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900">
             <flux:sidebar.header>
                 <x-app-logo :sidebar="true" href="{{ route('dashboard') }}" wire:navigate />
                 <flux:sidebar.collapse class="lg:hidden" />
@@ -15,6 +15,18 @@
                     <flux:sidebar.item icon="home" :href="route('dashboard')" :current="request()->routeIs('dashboard')" wire:navigate>
                         {{ __('Dashboard') }}
                     </flux:sidebar.item>
+                    <flux:sidebar.item icon="users" :href="route('employees.index')" :current="request()->routeIs('employees.index')" wire:navigate>
+                        {{ __('Employees') }}
+                    </flux:sidebar.item>
+
+                    @can('manage settings')
+                        <flux:sidebar.item icon="lock-closed" :href="route('settings.roles')" :current="request()->routeIs('settings.roles')" wire:navigate>
+                            {{ __('Roles & Permissions') }}
+                        </flux:sidebar.item>
+                        <flux:sidebar.item icon="calendar-days" :href="route('settings.special-days')" :current="request()->routeIs('settings.special-days')" wire:navigate>
+                            {{ __('Manage Special Days') }}
+                        </flux:sidebar.item>
+                    @endcan
                 </flux:sidebar.group>
             </flux:sidebar.nav>
 
@@ -90,6 +102,9 @@
 
         {{ $slot }}
 
+        <flux:toast position="bottom right" />
+
         @fluxScripts
+        @vite('resources/js/app.js')
     </body>
 </html>

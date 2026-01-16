@@ -10,6 +10,9 @@ interface LeaveRequestRepositoryInterface extends BaseRepositoryInterface
     // Visszaadja egy adott user összes kérelmét (szűrhető státuszra)
     public function getForUser(int $userId, ?string $status = null): Collection;
 
+    // Naptárhoz: adott időszakra eső kérelmek
+    public function getForUserInPeriod(int $userId, string $start, string $end): Collection;
+
     // Vezetőnek: a hozzá tartozó jóváhagyásra váró kérelmek
     public function getPendingForManager(int $managerId): Collection;
 

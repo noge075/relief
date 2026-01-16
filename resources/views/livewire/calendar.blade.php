@@ -25,7 +25,7 @@
         <div class="flex items-center gap-1 bg-zinc-100 dark:bg-zinc-800 p-1 rounded-lg shadow-sm w-full md:w-auto justify-center">
             <flux:button icon="chevron-left" wire:click="prevMonth" variant="ghost" size="sm" class="!h-8 !w-8" />
             <div class="h-4 w-px bg-zinc-300 dark:bg-zinc-600 mx-1"></div>
-            <flux:button wire:click="jumpToToday" variant="ghost" size="sm" class="text-xs font-medium px-3">Ma</flux:button>
+            <flux:button wire:click="jumpToToday" variant="ghost" size="sm" class="text-xs font-medium px-3">{{ __('Today') }}</flux:button>
             <div class="h-4 w-px bg-zinc-300 dark:bg-zinc-600 mx-1"></div>
             <flux:button icon="chevron-right" wire:click="nextMonth" variant="ghost" size="sm" class="!h-8 !w-8" />
         </div>
@@ -34,9 +34,9 @@
     <div class="border-t border-zinc-200 dark:border-zinc-700 md:border md:rounded-xl md:overflow-hidden md:shadow-sm bg-white dark:bg-zinc-900">
 
         <div class="hidden md:grid grid-cols-7 bg-zinc-50 dark:bg-zinc-800/50 border-b border-zinc-200 dark:border-zinc-700">
-            @foreach(['Hét', 'Ked', 'Sze', 'Csü', 'Pén', 'Szo', 'Vas'] as $dayName)
+            @foreach(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] as $dayName)
                 <div class="py-3 text-center text-xs font-bold text-zinc-500 uppercase tracking-wider">
-                    {{ $dayName }}
+                    {{ __($dayName) }}
                 </div>
             @endforeach
         </div>
@@ -79,7 +79,7 @@
 
                         @if($day['is_holiday'])
                             <span class="md:hidden text-xs font-medium text-red-500 ml-2">
-                                Munkaszünet
+                                {{ __('Holiday') }}
                             </span>
                         @endif
 
@@ -92,27 +92,27 @@
 
                     @if($day['is_holiday'])
                         <div class="hidden md:block mt-1 text-[10px] font-medium text-red-500 truncate text-center">
-                            Munkaszünet
+                            {{ __('Holiday') }}
                         </div>
                     @endif
 
                     <div class="mt-0 md:mt-2 flex-grow md:flex-grow-0 flex justify-end md:block ml-4 md:ml-0">
                         @if($day['event'])
                             @php
-                                $type = $day['event']['type'];
-                                $isPending = $day['event']['status'] === 'pending';
+                                $type = $day['event']->type->value;
+                                $isPending = $day['event']->status->value === 'pending';
                                 $color = match($type) { 'vacation' => 'yellow', 'sick' => 'red', 'home_office' => 'blue', default => 'zinc' };
-                                $label = match($type) { 'vacation' => 'Szabadság', 'sick' => 'Betegség', 'home_office' => 'Home Office', default => 'Egyéb' };
+                                $label = match($type) { 'vacation' => __('Vacation'), 'sick' => __('Sick Leave'), 'home_office' => __('Home Office'), default => __('Other') };
                             @endphp
 
                             <flux:badge
                                     :color="$color"
                                     size="sm"
                                     class="w-auto md:w-full justify-center md:justify-start truncate"
-                                    wire:click.stop="editEvent('{{ $day['event']['id'] ?? 1 }}')"
+                                    wire:click.stop="editEvent('{{ $day['event']->id }}')"
                             >
                                 <span class="mr-1">{{ $type == 'vacation' ? '🏖️' : ($type == 'home_office' ? '🏠' : '💊') }}</span>
-                                <span class="hidden sm:inline">{{ $label }}</span> @if($isPending) <span class="ml-1 text-[9px] opacity-70">(Függő)</span> @endif
+                                <span class="hidden sm:inline">{{ $label }}</span> @if($isPending) <span class="ml-1 text-[9px] opacity-70">({{ __('Pending') }})</span> @endif
                             </flux:badge>
                         @endif
                     </div>
@@ -125,21 +125,21 @@
             <div class="flex items-center gap-2">
                 <div class="w-2 h-2 rounded-full bg-zinc-400"></div>
                 <span class="text-zinc-600 dark:text-zinc-400">
-                    Munkanapok: <strong>{{ $this->monthlyStats['workdays'] }}</strong>
+                    {{ __('Workdays') }}: <strong>{{ $this->monthlyStats['workdays'] }}</strong>
                 </span>
             </div>
 
             <div class="flex items-center gap-2">
                 <div class="w-2 h-2 rounded-full bg-red-400"></div>
                 <span class="text-zinc-600 dark:text-zinc-400">
-                    Ünnep/Hétvége: <strong>{{ $this->monthlyStats['holidays'] }}</strong>
+                    {{ __('Holidays/Weekends') }}: <strong>{{ $this->monthlyStats['holidays'] }}</strong>
                 </span>
             </div>
 
             <div class="flex items-center gap-2">
                 <div class="w-2 h-2 rounded-full bg-indigo-400"></div>
                 <span class="text-zinc-600 dark:text-zinc-400">
-                    Igényelt távollét: <strong>{{ $this->monthlyStats['requests'] }}</strong>
+                    {{ __('Requests') }}: <strong>{{ $this->monthlyStats['requests'] }}</strong>
                 </span>
             </div>
 
@@ -150,35 +150,35 @@
         <div class="space-y-6">
             <div>
                 <flux:heading size="lg">
-                    {{ $editingId ? 'Igénylés szerkesztése' : 'Új igénylés' }}
+                    {{ $editingId ? __('Edit Request') : __('New Request') }}
                 </flux:heading>
                 <flux:subheading>
-                    @if($editingId) A kiválasztott esemény módosítása.
-                    @else Válassz típust: <strong>{{ $selectedDate }}</strong>
+                    @if($editingId) {{ __('Modify the selected request.') }}
+                    @else {{ __('Select type for:') }} <strong>{{ $selectedDate }}</strong>
                     @endif
                 </flux:subheading>
             </div>
 
             <div class="grid gap-4">
-                <flux:radio.group wire:model="requestType" label="Típus">
-                    <flux:radio value="vacation" label="🏖️ Szabadság" description="Éves keretből vonódik" />
-                    <flux:radio value="home_office" label="🏠 Home Office" />
-                    <flux:radio value="sick" label="💊 Betegszabadság" />
+                <flux:radio.group wire:model="requestType" label="{{ __('Type') }}">
+                    <flux:radio value="vacation" label="🏖️ {{ __('Vacation') }}" description="{{ __('Deducted from annual balance') }}" />
+                    <flux:radio value="home_office" label="🏠 {{ __('Home Office') }}" />
+                    <flux:radio value="sick" label="💊 {{ __('Sick Leave') }}" />
                 </flux:radio.group>
 
-                <flux:textarea label="Megjegyzés" rows="2" />
+                <flux:textarea wire:model="reason" label="{{ __('Reason') }}" rows="2" placeholder="{{ __('Optional comment...') }}" />
             </div>
 
             <div class="flex flex-col-reverse md:flex-row justify-between gap-4 md:gap-2">
                 @if($editingId)
-                    <flux:button variant="danger" class="w-full md:w-auto" wire:click="deleteEvent({{ $editingId }})">Törlés</flux:button>
+                    <flux:button variant="danger" class="w-full md:w-auto" wire:click="deleteEvent({{ $editingId }})">{{ __('Delete') }}</flux:button>
                 @else
                     <div></div>
                 @endif
                 <div class="flex flex-col md:flex-row gap-2 w-full md:w-auto">
-                    <flux:button variant="ghost" class="w-full md:w-auto" wire:click="$set('showRequestModal', false)">Mégse</flux:button>
+                    <flux:button variant="ghost" class="w-full md:w-auto" wire:click="$set('showRequestModal', false)">{{ __('Cancel') }}</flux:button>
                     <flux:button variant="primary" class="w-full md:w-auto" wire:click="saveEvent">
-                        {{ $editingId ? 'Mentés' : 'Beküldés' }}
+                        {{ $editingId ? __('Save') : __('Submit') }}
                     </flux:button>
                 </div>
             </div>

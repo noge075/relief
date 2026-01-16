@@ -2,6 +2,11 @@
 
 namespace App\Livewire;
 
+use App\Repositories\Contracts\LeaveRequestRepositoryInterface;
+use App\Services\LeaveRequestService;
+use App\Services\HolidayService;
+use Flux\Flux;
+use Illuminate\Validation\ValidationException;
 use Livewire\Component;
 use Livewire\Attributes\Computed;
 use Carbon\Carbon;
@@ -15,6 +20,21 @@ class Calendar extends Component
     public $selectedDate = null;
     public $showRequestModal = false;
     public $editingId = null;
+    
+    // Form mezők
+    public $requestType = 'vacation';
+    public $reason = '';
+
+    protected LeaveRequestRepositoryInterface $leaveRequestRepository;
+    protected HolidayService $holidayService;
+
+    public function boot(
+        LeaveRequestRepositoryInterface $leaveRequestRepository,
+        HolidayService $holidayService
+    ) {
+        $this->leaveRequestRepository = $leaveRequestRepository;
+        $this->holidayService = $holidayService;
+    }
 
     public function mount()
     {
@@ -40,14 +60,10 @@ class Calendar extends Component
     // --- Interakció ---
     public function selectDate($dateStr)
     {
-        // ... (dátum ellenőrzés marad) ...
-
         $this->selectedDate = $dateStr;
-
-        // FONTOS: Reseteljük a szerkesztést, mert ez új felvitel!
         $this->editingId = null;
-        $this->requestType = 'vacation'; // Alapértelmezett érték visszaállítása
-
+        $this->requestType = 'vacation'; 
+        $this->reason = '';
         $this->showRequestModal = true;
     }
 
@@ -56,26 +72,41 @@ class Calendar extends Component
     {
         $currentMonth = CarbonImmutable::parse($this->date);
         $startOfGrid = $currentMonth->startOfWeek(Carbon::MONDAY);
+        $endOfGrid = $startOfGrid->copy()->addDays(41);
 
-        // Demo ünnepnapok (Március 15, Május 1, Aug 20, Okt 23, Nov 1, Dec 25-26)
-        $holidays = [
-            '2025-03-15', '2025-05-01', '2025-08-20', '2025-10-23', '2025-11-01', '2025-12-25', '2025-12-26',
-            '2026-01-01', '2026-03-15'
-        ];
+        // Ünnepnapok és extra munkanapok lekérése
+        $holidays = $this->holidayService->getHolidaysInRange($startOfGrid, $endOfGrid);
+        $extraWorkdays = $this->holidayService->getExtraWorkdaysInRange($startOfGrid, $endOfGrid);
 
-        // Demo Igénylések (Ezt majd a Repository-ból töltjük)
-        $requests = [
-            '2026-01-10' => ['type' => 'vacation', 'status' => 'approved'],
-            '2026-01-20' => ['type' => 'home_office', 'status' => 'pending'],
-            '2026-01-21' => ['type' => 'home_office', 'status' => 'pending'],
-            '2026-01-24' => ['type' => 'sick', 'status' => 'approved'],
-        ];
+        // Adatbázis lekérdezés
+        $dbRequests = $this->leaveRequestRepository->getForUserInPeriod(
+            auth()->id(),
+            $startOfGrid->format('Y-m-d'),
+            $endOfGrid->format('Y-m-d')
+        );
+
+        // Mapelés dátumra
+        $requestsByDate = [];
+        foreach ($dbRequests as $req) {
+            $period = Carbon::parse($req->start_date)->daysUntil($req->end_date);
+            foreach ($period as $date) {
+                $requestsByDate[$date->format('Y-m-d')] = $req;
+            }
+        }
 
         $days = collect();
 
         for ($i = 0; $i < 42; $i++) {
             $day = $startOfGrid->addDays($i);
             $dateStr = $day->format('Y-m-d');
+            
+            // Ünnepnap logika:
+            // 1. Explicit ünnepnap (Spatie vagy DB holiday)
+            // 2. Hétvége, KIVÉVE ha explicit munkanap (DB workday)
+            $isExplicitHoliday = isset($holidays[$dateStr]);
+            $isExplicitWorkday = isset($extraWorkdays[$dateStr]);
+            
+            $isHoliday = $isExplicitHoliday || ($day->isWeekend() && !$isExplicitWorkday);
 
             $days->push([
                 'date' => $day,
@@ -83,9 +114,9 @@ class Calendar extends Component
                 'is_current_month' => $day->month === $currentMonth->month,
                 'is_today' => $day->isToday(),
                 'is_weekend' => $day->isWeekend(),
-                'is_holiday' => in_array($dateStr, $holidays),
-                // Adatok összefésülése
-                'event' => $requests[$dateStr] ?? null,
+                'is_holiday' => $isHoliday,
+                'holiday_name' => $isExplicitHoliday ? $holidays[$dateStr]['name'] : ($isExplicitWorkday ? $extraWorkdays[$dateStr]['name'] : null),
+                'event' => $requestsByDate[$dateStr] ?? null,
             ]);
         }
 
@@ -95,11 +126,10 @@ class Calendar extends Component
     #[Computed]
     public function monthlyStats()
     {
-        // Gyors statisztika a footerhez
         $days = $this->calendarDays->where('is_current_month', true);
 
         return [
-            'workdays' => $days->where('is_weekend', false)->where('is_holiday', false)->count(),
+            'workdays' => $days->where('is_holiday', false)->count(),
             'holidays' => $days->where('is_holiday', true)->count(),
             'requests' => $days->whereNotNull('event')->count(),
         ];
@@ -107,13 +137,9 @@ class Calendar extends Component
 
     public function jumpToDate($year, $month)
     {
-        // Összerakjuk az új dátumot (mindig elsejére)
         $this->date = CarbonImmutable::createFromDate($year, $month, 1)->format('Y-m-d');
-
-        // Opcionális: itt lehetne bezárni a dropdown-t, de a Flux/Livewire ezt általában lekezeli az újrarajzolással.
     }
 
-    // Segédmetódus a nézetnek, hogy tudjuk, épp melyik évet nézzük
     #[Computed]
     public function currentYear()
     {
@@ -129,31 +155,60 @@ class Calendar extends Component
     public function editEvent($eventId)
     {
         $this->editingId = $eventId;
-
-        // ITT TÖLTENÉNK BE ADATBÁZISBÓL (Most csak demo)
-        // $event = LeaveRequest::find($eventId);
-        // $this->requestType = $event->type;
-        $this->requestType = 'home_office'; // Demo: tegyük fel, hogy HO-t szerkesztünk
-
-        $this->showRequestModal = true;
-    }
-
-    public function saveEvent()
-    {
-        if ($this->editingId) {
-            // Update logika (Repository update)
-        } else {
-            // Create logika (Repository create)
+        $event = $this->leaveRequestRepository->find($eventId);
+        
+        if ($event && $event->user_id === auth()->id()) {
+            $this->requestType = $event->type->value;
+            $this->reason = $event->reason;
+            $this->selectedDate = $event->start_date->format('Y-m-d'); // Csak a kezdő dátumot kezeljük most
+            $this->showRequestModal = true;
         }
-
-        $this->showRequestModal = false;
-        // $this->dispatch('refresh-calendar'); // Ha lenne ilyen
     }
 
-    public function deleteEvent($id)
+    public function saveEvent(LeaveRequestService $leaveRequestService)
     {
-        // Delete logika
-        $this->showRequestModal = false;
+        try {
+            $this->validate([
+                'requestType' => 'required',
+                'selectedDate' => 'required|date',
+                'reason' => 'nullable|string|max:255',
+            ]);
+
+            if ($this->editingId) {
+                $leaveRequestService->updateRequest(auth()->user(), $this->editingId, [
+                    'type' => $this->requestType,
+                    'start_date' => $this->selectedDate,
+                    'end_date' => $this->selectedDate, // Egyelőre 1 napos
+                    'reason' => $this->reason,
+                ]);
+                Flux::toast(__('Request updated successfully.'), variant: 'success');
+            } else {
+                $leaveRequestService->createRequest(auth()->user(), [
+                    'type' => $this->requestType,
+                    'start_date' => $this->selectedDate,
+                    'end_date' => $this->selectedDate, // Egyelőre 1 napos
+                    'reason' => $this->reason,
+                ]);
+                Flux::toast(__('Request submitted successfully.'), variant: 'success');
+            }
+            
+            $this->showRequestModal = false;
+        } catch (ValidationException $e) {
+            Flux::toast($e->getMessage(), variant: 'danger');
+        } catch (\Exception $e) {
+            Flux::toast($e->getMessage(), variant: 'danger');
+        }
+    }
+
+    public function deleteEvent($id, LeaveRequestService $leaveRequestService)
+    {
+        try {
+            $leaveRequestService->deleteRequest($id, auth()->id());
+            Flux::toast(__('Request deleted.'), variant: 'success');
+            $this->showRequestModal = false;
+        } catch (\Exception $e) {
+            Flux::toast($e->getMessage(), variant: 'danger');
+        }
     }
 
     public function render()

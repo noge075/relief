@@ -7,6 +7,11 @@ use App\Repositories\Contracts\LeaveBalanceRepositoryInterface;
 
 class EloquentLeaveBalanceRepository extends BaseRepository implements LeaveBalanceRepositoryInterface
 {
+    public function __construct(LeaveBalance $model)
+    {
+        parent::__construct($model);
+    }
+
     public function getBalance(int $userId, int $year, string $type): ?LeaveBalance
     {
         return LeaveBalance::where('user_id', $userId)
