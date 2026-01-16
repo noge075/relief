@@ -1,5 +1,10 @@
 <?php
 
+use App\Livewire\Approvals\ManageApprovals;
+use App\Livewire\Employees\ManageEmployees;
+use App\Livewire\Employees\ManageLeaveBalances;
+use App\Livewire\Roles\ManageRoles;
+use App\Livewire\SpecialDays\ManageSpecialDays;
 use Illuminate\Support\Facades\Route;
 
 Route::redirect('/', 'dashboard')
@@ -9,11 +14,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::view('dashboard', 'dashboard')
         ->name('dashboard');
 
-    // Employee Routes
-    Route::prefix('employees')->name('employees.')->group(function () {
-        Route::get('/', App\Livewire\Employees\Index::class)
-            ->name('index');
-    });
+Route::middleware(['auth'])->group(function () {
+    Route::get('/employees', ManageEmployees::class)->name('employees.index');
+    Route::get('/employees/balances', ManageLeaveBalances::class)->name('employees.balances');
+    Route::get('/approvals', ManageApprovals::class)->name('approvals.index');
+    Route::get('/roles', ManageRoles::class)->name('settings.roles');
+    Route::get('/special-days', ManageSpecialDays::class)->name('settings.special-days');
 });
 
-require __DIR__ . '/settings.php';
+require __DIR__.'/settings.php';

@@ -21,6 +21,7 @@ class LeaveRequest extends Model
         'start_date' => 'date',
         'end_date' => 'date',
         'is_policy_override' => 'boolean',
+        'days_count' => 'integer'
     ];
 
     public function user(): BelongsTo

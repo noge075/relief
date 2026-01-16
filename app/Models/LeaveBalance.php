@@ -8,6 +8,11 @@ class LeaveBalance extends Model
 {
     protected $fillable = ['user_id', 'year', 'type', 'allowance', 'used'];
 
+    protected $casts = [
+        'allowance' => 'float',
+        'used' => 'float',
+    ];
+
     public function user() {
         return $this->belongsTo(User::class);
     }
