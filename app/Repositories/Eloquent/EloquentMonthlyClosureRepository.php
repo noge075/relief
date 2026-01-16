@@ -8,6 +8,11 @@ use Carbon\Carbon;
 
 class EloquentMonthlyClosureRepository extends BaseRepository implements MonthlyClosureRepositoryInterface
 {
+    public function __construct(MonthlyClosure $model)
+    {
+        parent::__construct($model);
+    }
+
     public function isMonthClosed(string $date): bool
     {
         // Átalakítjuk a hónap első napjára, mert úgy tároljuk

@@ -12,4 +12,7 @@ interface UserRepositoryInterface extends BaseRepositoryInterface
 
     // HR-nek: csoport szerinti szűrés
     public function getByDepartment(int $departmentId): Collection;
+
+    public function getPaginated(int $perPage = 10, ?string $search = null);
+    public function syncRoles(User $user, array $roles);
 }

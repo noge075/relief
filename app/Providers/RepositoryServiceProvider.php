@@ -4,9 +4,13 @@ namespace App\Providers;
 
 use App\Repositories\Contracts\AttendanceDocumentRepositoryInterface;
 use App\Repositories\Contracts\DepartmentRepositoryInterface;
+use App\Repositories\Contracts\RoleRepositoryInterface;
+use App\Repositories\Contracts\SpecialDayRepositoryInterface;
 use App\Repositories\Contracts\WorkScheduleRepositoryInterface;
 use App\Repositories\Eloquent\EloquentAttendanceDocumentRepository;
 use App\Repositories\Eloquent\EloquentDepartmentRepository;
+use App\Repositories\Eloquent\EloquentRoleRepository;
+use App\Repositories\Eloquent\EloquentSpecialDayRepository;
 use App\Repositories\Eloquent\EloquentWorkScheduleRepository;
 use Illuminate\Support\ServiceProvider;
 
@@ -34,14 +38,11 @@ class RepositoryServiceProvider extends ServiceProvider
         $this->app->bind(LeaveBalanceRepositoryInterface::class, EloquentLeaveBalanceRepository::class);
         $this->app->bind(AttendanceLogRepositoryInterface::class, EloquentAttendanceLogRepository::class);
         $this->app->bind(MonthlyClosureRepositoryInterface::class, EloquentMonthlyClosureRepository::class);
-        $this->app->bind(UserRepositoryInterface::class, EloquentUserRepository::class);
         $this->app->bind(DepartmentRepositoryInterface::class, EloquentDepartmentRepository::class);
         $this->app->bind(WorkScheduleRepositoryInterface::class, EloquentWorkScheduleRepository::class);
-        $this->app->bind(LeaveRequestRepositoryInterface::class, EloquentLeaveRequestRepository::class);
-        $this->app->bind(LeaveBalanceRepositoryInterface::class, EloquentLeaveBalanceRepository::class);
-        $this->app->bind(AttendanceLogRepositoryInterface::class, EloquentAttendanceLogRepository::class);
-        $this->app->bind(MonthlyClosureRepositoryInterface::class, EloquentMonthlyClosureRepository::class);
         $this->app->bind(AttendanceDocumentRepositoryInterface::class, EloquentAttendanceDocumentRepository::class);
+        $this->app->bind(RoleRepositoryInterface::class, EloquentRoleRepository::class);
+        $this->app->bind(SpecialDayRepositoryInterface::class, EloquentSpecialDayRepository::class);
     }
 
     /**
