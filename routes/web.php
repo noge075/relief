@@ -10,9 +10,9 @@ use Illuminate\Support\Facades\Route;
 Route::redirect('/', 'dashboard')
     ->name('home');
 
-Route::view('dashboard', 'dashboard')
-    ->middleware(['auth', 'verified'])
-    ->name('dashboard');
+Route::middleware(['auth', 'verified'])->group(function () {
+    Route::view('dashboard', 'dashboard')
+        ->name('dashboard');
 
 Route::middleware(['auth'])->group(function () {
     Route::get('/employees', ManageEmployees::class)->name('employees.index');
