@@ -18,6 +18,7 @@ class Calendar extends Component
 
     // Modal vezérléshez
     public $selectedDate = null;
+    public $endDate = null;
     public $showRequestModal = false;
     public $editingId = null;
     
@@ -61,6 +62,7 @@ class Calendar extends Component
     public function selectDate($dateStr)
     {
         $this->selectedDate = $dateStr;
+        $this->endDate = $dateStr;
         $this->editingId = null;
         $this->requestType = 'vacation'; 
         $this->reason = '';
@@ -129,7 +131,7 @@ class Calendar extends Component
         $days = $this->calendarDays->where('is_current_month', true);
 
         return [
-            'workdays' => $days->where('is_holiday', false)->count(),
+            'workdays' => $days->where('is_weekend', false)->where('is_holiday', false)->count(),
             'holidays' => $days->where('is_holiday', true)->count(),
             'requests' => $days->whereNotNull('event')->count(),
         ];
@@ -160,7 +162,8 @@ class Calendar extends Component
         if ($event && $event->user_id === auth()->id()) {
             $this->requestType = $event->type->value;
             $this->reason = $event->reason;
-            $this->selectedDate = $event->start_date->format('Y-m-d'); // Csak a kezdő dátumot kezeljük most
+            $this->selectedDate = $event->start_date->format('Y-m-d');
+            $this->endDate = $event->end_date->format('Y-m-d');
             $this->showRequestModal = true;
         }
     }
@@ -171,6 +174,7 @@ class Calendar extends Component
             $this->validate([
                 'requestType' => 'required',
                 'selectedDate' => 'required|date',
+                'endDate' => 'required|date|after_or_equal:selectedDate',
                 'reason' => 'nullable|string|max:255',
             ]);
 
@@ -178,7 +182,7 @@ class Calendar extends Component
                 $leaveRequestService->updateRequest(auth()->user(), $this->editingId, [
                     'type' => $this->requestType,
                     'start_date' => $this->selectedDate,
-                    'end_date' => $this->selectedDate, // Egyelőre 1 napos
+                    'end_date' => $this->endDate,
                     'reason' => $this->reason,
                 ]);
                 Flux::toast(__('Request updated successfully.'), variant: 'success');
@@ -186,7 +190,7 @@ class Calendar extends Component
                 $leaveRequestService->createRequest(auth()->user(), [
                     'type' => $this->requestType,
                     'start_date' => $this->selectedDate,
-                    'end_date' => $this->selectedDate, // Egyelőre 1 napos
+                    'end_date' => $this->endDate,
                     'reason' => $this->reason,
                 ]);
                 Flux::toast(__('Request submitted successfully.'), variant: 'success');

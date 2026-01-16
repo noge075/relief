@@ -37,11 +37,11 @@ class ManageEmployees extends Component
     public function render(UserService $userService)
     {
         return view('livewire.employees.manage-employees', [
-            'users' => $userService->getEmployeesList(10, $this->search),
+            'users' => $userService->getEmployeesList(auth()->user(), 10, $this->search),
             'departments' => Department::all(),
             'schedules' => WorkSchedule::all(),
             'roles' => Role::all(),
-        ]);
+        ])->title(__('Employees'));
     }
 
     public function openCreate()

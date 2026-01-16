@@ -79,7 +79,7 @@
 
                         @if($day['is_holiday'])
                             <span class="md:hidden text-xs font-medium text-red-500 ml-2">
-                                {{ __('Holiday') }}
+                                {{ $day['holiday_name'] ?? __('Holiday') }}
                             </span>
                         @endif
 
@@ -92,7 +92,7 @@
 
                     @if($day['is_holiday'])
                         <div class="hidden md:block mt-1 text-[10px] font-medium text-red-500 truncate text-center">
-                            {{ __('Holiday') }}
+                            {{ $day['holiday_name'] ?? __('Holiday') }}
                         </div>
                     @endif
 
@@ -146,43 +146,6 @@
         </div>
     </div>
 
-    <flux:modal wire:model="showRequestModal" class="w-full md:min-w-[400px]">
-        <div class="space-y-6">
-            <div>
-                <flux:heading size="lg">
-                    {{ $editingId ? __('Edit Request') : __('New Request') }}
-                </flux:heading>
-                <flux:subheading>
-                    @if($editingId) {{ __('Modify the selected request.') }}
-                    @else {{ __('Select type for:') }} <strong>{{ $selectedDate }}</strong>
-                    @endif
-                </flux:subheading>
-            </div>
-
-            <div class="grid gap-4">
-                <flux:radio.group wire:model="requestType" label="{{ __('Type') }}">
-                    <flux:radio value="vacation" label="🏖️ {{ __('Vacation') }}" description="{{ __('Deducted from annual balance') }}" />
-                    <flux:radio value="home_office" label="🏠 {{ __('Home Office') }}" />
-                    <flux:radio value="sick" label="💊 {{ __('Sick Leave') }}" />
-                </flux:radio.group>
-
-                <flux:textarea wire:model="reason" label="{{ __('Reason') }}" rows="2" placeholder="{{ __('Optional comment...') }}" />
-            </div>
-
-            <div class="flex flex-col-reverse md:flex-row justify-between gap-4 md:gap-2">
-                @if($editingId)
-                    <flux:button variant="danger" class="w-full md:w-auto" wire:click="deleteEvent({{ $editingId }})">{{ __('Delete') }}</flux:button>
-                @else
-                    <div></div>
-                @endif
-                <div class="flex flex-col md:flex-row gap-2 w-full md:w-auto">
-                    <flux:button variant="ghost" class="w-full md:w-auto" wire:click="$set('showRequestModal', false)">{{ __('Cancel') }}</flux:button>
-                    <flux:button variant="primary" class="w-full md:w-auto" wire:click="saveEvent">
-                        {{ $editingId ? __('Save') : __('Submit') }}
-                    </flux:button>
-                </div>
-            </div>
-        </div>
-    </flux:modal>
+    @include('livewire.calendar-request-form')
 
 </div>

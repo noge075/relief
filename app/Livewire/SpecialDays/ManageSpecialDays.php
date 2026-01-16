@@ -5,13 +5,11 @@ namespace App\Livewire\SpecialDays;
 use App\Services\HolidayService;
 use Carbon\Carbon;
 use Flux\Flux;
-use Livewire\Attributes\Title;
 use Livewire\Component;
 use Livewire\WithPagination;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 
-#[Title('Manage Special Days')]
 class ManageSpecialDays extends Component
 {
     use AuthorizesRequests;
@@ -120,6 +118,6 @@ class ManageSpecialDays extends Component
 
         return view('livewire.special-days.manage-special-days', [
             'specialDays' => $paginatedDays
-        ]);
+        ])->title(__('Manage Special Days'));
     }
 }
