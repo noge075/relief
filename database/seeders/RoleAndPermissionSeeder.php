@@ -79,6 +79,7 @@ class RoleAndPermissionSeeder extends Seeder
             'view leave balances', 'adjust leave balances', 'view leave requests', 'approve leave requests', 'delete leave requests',
             'view attendance', 'manage attendance', 'export attendance',
             'view documents', 'upload documents', 'delete documents',
+            'manage settings', // Added for Roles & Special Days
         ]);
 
         // Manager - Team Lead

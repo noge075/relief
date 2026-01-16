@@ -4,12 +4,10 @@ namespace App\Livewire\Roles;
 
 use App\Services\RoleService;
 use Flux\Flux;
-use Livewire\Attributes\Title;
 use Livewire\Component;
 use Livewire\WithPagination;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 
-#[Title('Manage Roles')]
 class ManageRoles extends Component
 {
     use AuthorizesRequests;
@@ -100,6 +98,6 @@ class ManageRoles extends Component
     {
         return view('livewire.roles.manage-roles', [
             'roles' => $this->roleService->getPaginatedRoles(10),
-        ]);
+        ])->title(__('Manage Roles'));
     }
 }

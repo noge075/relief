@@ -15,7 +15,8 @@ class LeaveRequestService
 {
     public function __construct(
         protected LeaveRequestRepositoryInterface $leaveRequestRepository,
-        protected LeaveBalanceRepositoryInterface $leaveBalanceRepository
+        protected LeaveBalanceRepositoryInterface $leaveBalanceRepository,
+        protected HolidayService $holidayService
     ) {}
 
     public function createRequest(User $user, array $data)
@@ -46,12 +47,14 @@ class LeaveRequestService
         if ($type === LeaveType::VACATION) {
             $daysCount = $this->calculateWorkingDays($startDate, $endDate);
             $this->validateLeaveBalance($user, $daysCount, $startDate->year);
+        } else {
+            $daysCount = $this->calculateWorkingDays($startDate, $endDate);
         }
 
         // Mentés
         $data['user_id'] = $user->id;
         $data['status'] = LeaveStatus::PENDING->value;
-        $data['days_count'] = $startDate->diffInDays($endDate) + 1; // Egyszerűsített
+        $data['days_count'] = $daysCount;
 
         return $this->leaveRequestRepository->create($data);
     }
@@ -91,15 +94,57 @@ class LeaveRequestService
         if ($type === LeaveType::VACATION) {
             $daysCount = $this->calculateWorkingDays($startDate, $endDate);
             $this->validateLeaveBalance($user, $daysCount, $startDate->year, $id);
+        } else {
+            $daysCount = $this->calculateWorkingDays($startDate, $endDate);
         }
 
         // Adatok frissítése
         $data['status'] = LeaveStatus::PENDING->value; // Újra jóváhagyás kell
-        $data['days_count'] = $startDate->diffInDays($endDate) + 1;
+        $data['days_count'] = $daysCount;
         $data['manager_comment'] = null;
         $data['approver_id'] = null;
 
         return $this->leaveRequestRepository->update($id, $data);
+    }
+
+    public function approveRequest(int $id, User $approver)
+    {
+        return DB::transaction(function () use ($id, $approver) {
+            $request = $this->leaveRequestRepository->find($id);
+
+            if (!$request) {
+                throw new \Exception(__('Request not found.'));
+            }
+
+            // Jogosultság ellenőrzés (Manager vagy HR)
+            // Ezt a Livewire komponensben vagy Policy-ban kellene, de itt is lehet egy extra check.
+            // if ($approver->id !== $request->user->manager_id && !$approver->hasRole('hr')) ...
+
+            $this->leaveRequestRepository->updateStatus($request, LeaveStatus::APPROVED->value);
+
+            // Ha Vacation, levonjuk a keretből (növeljük a used-et)
+            if ($request->type === LeaveType::VACATION) {
+                $this->leaveBalanceRepository->incrementUsed(
+                    $request->user_id,
+                    $request->start_date->year,
+                    LeaveType::VACATION->value,
+                    $request->days_count
+                );
+            }
+            
+            return true;
+        });
+    }
+
+    public function rejectRequest(int $id, User $approver, string $comment)
+    {
+        $request = $this->leaveRequestRepository->find($id);
+
+        if (!$request) {
+            throw new \Exception(__('Request not found.'));
+        }
+
+        return $this->leaveRequestRepository->updateStatus($request, LeaveStatus::REJECTED->value, $comment);
     }
 
     protected function validateHomeOfficeLimit(User $user, Carbon $start, Carbon $end)
@@ -155,8 +200,34 @@ class LeaveRequestService
 
     protected function calculateWorkingDays(Carbon $start, Carbon $end)
     {
-        return $start->diffInDaysFiltered(function (Carbon $date) {
-            return !$date->isWeekend();
+        // Ünnepnapok lekérése az időszakra
+        $holidays = $this->holidayService->getHolidaysInRange($start, $end);
+        $holidayDates = array_keys($holidays);
+        
+        // Extra munkanapok
+        $extraWorkdays = $this->holidayService->getExtraWorkdaysInRange($start, $end);
+        $extraWorkdayDates = array_keys($extraWorkdays);
+
+        return $start->diffInDaysFiltered(function (Carbon $date) use ($holidayDates, $extraWorkdayDates) {
+            $dateStr = $date->format('Y-m-d');
+            
+            // Munkanap, ha:
+            // 1. Nem hétvége ÉS nem ünnep
+            // 2. VAGY hétvége DE extra munkanap
+            
+            $isWeekend = $date->isWeekend();
+            $isHoliday = in_array($dateStr, $holidayDates);
+            $isExtraWorkday = in_array($dateStr, $extraWorkdayDates);
+            
+            if ($isExtraWorkday) {
+                return true;
+            }
+            
+            if ($isHoliday) {
+                return false;
+            }
+            
+            return !$isWeekend;
         }, $end) + 1;
     }
     

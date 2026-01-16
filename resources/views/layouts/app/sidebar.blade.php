@@ -19,6 +19,18 @@
                         {{ __('Employees') }}
                     </flux:sidebar.item>
 
+                    @can('approve leave requests')
+                        <flux:sidebar.item icon="check-badge" :href="route('approvals.index')" :current="request()->routeIs('approvals.index')" wire:navigate>
+                            {{ __('Approvals') }}
+                        </flux:sidebar.item>
+                    @endcan
+
+                    @can('adjust leave balances')
+                        <flux:sidebar.item icon="scale" :href="route('employees.balances')" :current="request()->routeIs('employees.balances')" wire:navigate>
+                            {{ __('Manage Leave Balances') }}
+                        </flux:sidebar.item>
+                    @endcan
+
                     @can('manage settings')
                         <flux:sidebar.item icon="lock-closed" :href="route('settings.roles')" :current="request()->routeIs('settings.roles')" wire:navigate>
                             {{ __('Roles & Permissions') }}

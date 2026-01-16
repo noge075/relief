@@ -14,8 +14,21 @@ class UserService
         protected UserRepositoryInterface $userRepository
     ) {}
 
-    public function getEmployeesList(int $perPage = 10, ?string $search = null): LengthAwarePaginator
+    public function getEmployeesList(User $actor, int $perPage = 10, ?string $search = null): LengthAwarePaginator
     {
+        if ($actor->hasRole('hr') || $actor->hasRole('super-admin') || $actor->hasRole('payroll')) {
+            return $this->userRepository->getPaginated($perPage, $search);
+        }
+
+        if ($actor->hasRole('manager')) {
+            return $this->userRepository->getSubordinatesPaginated($actor->id, $perPage, $search);
+        }
+
+        // Fallback: ha valakinek van joga látni, de nem a fenti role-ok egyike, akkor csak magát lássa?
+        // Vagy üres lista?
+        // A biztonság kedvéért üres lista, vagy csak saját maga.
+        // De a 'view users' jogot csak a fentiek kapták meg.
+        
         return $this->userRepository->getPaginated($perPage, $search);
     }
 
