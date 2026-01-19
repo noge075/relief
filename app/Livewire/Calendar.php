@@ -197,6 +197,7 @@ class Calendar extends Component
             }
             
             $this->showRequestModal = false;
+            $this->dispatch('leave-request-updated'); // Esemény küldése
         } catch (ValidationException $e) {
             Flux::toast($e->getMessage(), variant: 'danger');
         } catch (\Exception $e) {
@@ -210,6 +211,7 @@ class Calendar extends Component
             $leaveRequestService->deleteRequest($id, auth()->id());
             Flux::toast(__('Request deleted.'), variant: 'success');
             $this->showRequestModal = false;
+            $this->dispatch('leave-request-updated'); // Esemény küldése
         } catch (\Exception $e) {
             Flux::toast($e->getMessage(), variant: 'danger');
         }

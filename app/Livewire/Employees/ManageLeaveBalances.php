@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Employees;
 
+use App\Enums\PermissionType;
 use App\Models\LeaveBalance;
 use App\Models\User;
 use App\Repositories\Contracts\LeaveBalanceRepositoryInterface;
@@ -44,7 +45,7 @@ class ManageLeaveBalances extends Component
 
     public function mount()
     {
-        $this->authorize('adjust leave balances');
+        $this->authorize(PermissionType::ADJUST_LEAVE_BALANCES->value);
         $this->year = Carbon::now()->year;
     }
 
@@ -65,18 +66,7 @@ class ManageLeaveBalances extends Component
         $this->used = 0;
         
         // Csak azokat töltjük be, akiknek nincs kerete az adott évben
-        // Ha Manager, akkor csak a beosztottakat
-        $user = auth()->user();
-        if ($user->hasRole('manager') && !$user->hasRole('hr') && !$user->hasRole('super-admin')) {
-             // Itt kellene egy getUsersWithoutLeaveBalanceForManager metódus a repository-ban.
-             // De a Managernek nincs 'adjust leave balances' joga a seeder szerint, csak a HR-nek.
-             // Ha a Managernek is adunk jogot, akkor kell ez a logika.
-             // Jelenleg csak HR fér hozzá, aki mindent lát.
-             // De ha a jövőben változik, itt kell kezelni.
-             $this->users = $this->userRepository->getUsersWithoutLeaveBalance($this->year); // Ez mindent visszaad
-        } else {
-             $this->users = $this->userRepository->getUsersWithoutLeaveBalance($this->year);
-        }
+        $this->users = $this->userRepository->getUsersWithoutLeaveBalance($this->year);
         
         // Alapértelmezetten kiválasztjuk az elsőt, hogy ne legyen üres a select
         if ($this->users->isNotEmpty()) {
@@ -90,10 +80,10 @@ class ManageLeaveBalances extends Component
     {
         $balance = $this->leaveBalanceRepository->find($id);
         
-        // Jogosultság ellenőrzés: Manager csak a saját beosztottját szerkesztheti
-        $user = auth()->user();
-        if ($user->hasRole('manager') && !$user->hasRole('hr') && !$user->hasRole('super-admin')) {
-            if ($balance->user->manager_id !== $user->id) {
+        // Jogosultság ellenőrzés
+        if (!auth()->user()->can(PermissionType::VIEW_ALL_LEAVE_BALANCES->value)) {
+            // Ha nem láthat mindent, ellenőrizzük, hogy a saját beosztottja-e
+            if ($balance->user->manager_id !== auth()->id()) {
                 abort(403);
             }
         }
@@ -153,7 +143,7 @@ class ManageLeaveBalances extends Component
     {
         $user = auth()->user();
         
-        if ($user->hasRole('manager') && !$user->hasRole('hr') && !$user->hasRole('super-admin')) {
+        if (!$user->can(PermissionType::VIEW_ALL_LEAVE_BALANCES->value)) {
             $balances = $this->leaveBalanceRepository->getPaginatedForManager($user->id, $this->year, $this->search);
         } else {
             $balances = $this->leaveBalanceRepository->getPaginated($this->year, $this->search);

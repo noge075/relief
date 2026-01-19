@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Roles;
 
+use App\Enums\PermissionType;
 use App\Services\RoleService;
 use Flux\Flux;
 use Livewire\Component;
@@ -37,13 +38,13 @@ class ManageRoles extends Component
 
     public function mount()
     {
-        $this->authorize('manage settings');
+        $this->authorize(PermissionType::MANAGE_SETTINGS->value);
         $this->permissions = $this->roleService->getGroupedPermissions();
     }
 
     public function create()
     {
-        $this->authorize('manage settings');
+        $this->authorize(PermissionType::MANAGE_SETTINGS->value);
         $this->reset(['roleId', 'name', 'selectedPermissions']);
         $this->isEditing = false;
         $this->showModal = true;
@@ -51,7 +52,7 @@ class ManageRoles extends Component
 
     public function edit($id)
     {
-        $this->authorize('manage settings');
+        $this->authorize(PermissionType::MANAGE_SETTINGS->value);
         $role = $this->roleService->getRole($id);
         $this->roleId = $id;
         $this->name = $role->name;
@@ -63,7 +64,7 @@ class ManageRoles extends Component
 
     public function save()
     {
-        $this->authorize('manage settings');
+        $this->authorize(PermissionType::MANAGE_SETTINGS->value);
         $rules = $this->rules;
         if ($this->isEditing) {
             $rules['name'] = 'required|string|min:3|unique:roles,name,' . $this->roleId;
@@ -89,7 +90,7 @@ class ManageRoles extends Component
 
     public function delete($id)
     {
-        $this->authorize('manage settings');
+        $this->authorize(PermissionType::MANAGE_SETTINGS->value);
         $this->roleService->deleteRole($id);
         Flux::toast(__('Role deleted.'), variant: 'success');
     }

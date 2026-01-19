@@ -2,6 +2,8 @@
 
 namespace Database\Seeders;
 
+use App\Enums\PermissionType;
+use App\Enums\RoleType;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Spatie\Permission\Models\Permission;
@@ -18,93 +20,53 @@ class RoleAndPermissionSeeder extends Seeder
         app()[PermissionRegistrar::class]->forgetCachedPermissions();
 
         // 1. Define Permissions
-        $permissions = [
-            // User / Employee Management
-            'view users',
-            'create users',
-            'edit users',
-            'delete users',
-            'restore users', // Soft delete esetén
-            'view any user profile', // HR/Manager láthatja másét
-
-            // Department Management
-            'manage departments', // Create, edit, delete
-
-            // Work Schedule Management
-            'manage work schedules', // Create, edit, delete schedules
-            'assign work schedules',
-
-            // Leave Management
-            'view leave balances',
-            'adjust leave balances', // HR only
-            'view leave requests',
-            'create leave requests', // Employee
-            'approve leave requests', // Manager/HR
-            'delete leave requests',
-
-            // Attendance / Timesheet
-            'view attendance',
-            'manage attendance', // Edit logs manually
-            'export attendance',
-
-            // Documents
-            'view documents',
-            'upload documents',
-            'delete documents',
-
-            // Payroll / Monthly Closure
-            'view payroll data',
-            'manage monthly closures',
-            
-            // System / Settings
-            'view audit logs',
-            'manage settings',
-        ];
+        $permissions = PermissionType::cases();
 
         foreach ($permissions as $permission) {
-            Permission::firstOrCreate(['name' => $permission]);
+            Permission::firstOrCreate(['name' => $permission->value]);
         }
 
         // 2. Define Roles and Assign Permissions
 
-        $superAdmin = Role::firstOrCreate(['name' => 'super-admin']);
-        $superAdmin->givePermissionTo(Permission::all()); // Optional if using Gate::before
+        $superAdmin = Role::firstOrCreate(['name' => RoleType::SUPER_ADMIN->value]);
+        // $superAdmin->givePermissionTo(Permission::all()); // Handled by Gate::before in AppServiceProvider
 
         // HR - Human Resources
-        $hr = Role::firstOrCreate(['name' => 'hr']);
+        $hr = Role::firstOrCreate(['name' => RoleType::HR->value]);
         $hr->givePermissionTo([
-            'view users', 'create users', 'edit users', 'delete users', 'restore users', 'view any user profile',
-            'manage departments',
-            'manage work schedules', 'assign work schedules',
-            'view leave balances', 'adjust leave balances', 'view leave requests', 'approve leave requests', 'delete leave requests',
-            'view attendance', 'manage attendance', 'export attendance',
-            'view documents', 'upload documents', 'delete documents',
-            'manage settings', // Added for Roles & Special Days
+            PermissionType::VIEW_USERS->value, PermissionType::VIEW_ALL_USERS->value, PermissionType::CREATE_USERS->value, PermissionType::EDIT_USERS->value, PermissionType::DELETE_USERS->value, PermissionType::RESTORE_USERS->value, PermissionType::VIEW_ANY_USER_PROFILE->value,
+            PermissionType::MANAGE_DEPARTMENTS->value,
+            PermissionType::MANAGE_WORK_SCHEDULES->value, PermissionType::ASSIGN_WORK_SCHEDULES->value,
+            PermissionType::VIEW_LEAVE_BALANCES->value, PermissionType::VIEW_ALL_LEAVE_BALANCES->value, PermissionType::ADJUST_LEAVE_BALANCES->value, 
+            PermissionType::VIEW_LEAVE_REQUESTS->value, PermissionType::VIEW_ALL_LEAVE_REQUESTS->value, PermissionType::VIEW_LEAVE_REQUEST_DETAILS->value, PermissionType::APPROVE_LEAVE_REQUESTS->value, PermissionType::DELETE_LEAVE_REQUESTS->value,
+            PermissionType::VIEW_ATTENDANCE->value, PermissionType::MANAGE_ATTENDANCE->value, PermissionType::EXPORT_ATTENDANCE->value, PermissionType::VIEW_STATUS_BOARD->value,
+            PermissionType::VIEW_DOCUMENTS->value, PermissionType::UPLOAD_DOCUMENTS->value, PermissionType::DELETE_DOCUMENTS->value,
+            PermissionType::MANAGE_SETTINGS->value,
         ]);
 
         // Manager - Team Lead
-        $manager = Role::firstOrCreate(['name' => 'manager']);
+        $manager = Role::firstOrCreate(['name' => RoleType::MANAGER->value]);
         $manager->givePermissionTo([
-            'view users', // Can view list (usually filtered by scope)
-            'view any user profile', // Can view subordinates
-            'view leave requests', 'approve leave requests',
-            'view attendance',
-            'view documents',
+            PermissionType::VIEW_USERS->value, // Only subordinates (implied by lack of 'view all users')
+            PermissionType::VIEW_ANY_USER_PROFILE->value,
+            PermissionType::VIEW_LEAVE_REQUESTS->value, PermissionType::APPROVE_LEAVE_REQUESTS->value,
+            PermissionType::VIEW_ATTENDANCE->value, PermissionType::VIEW_STATUS_BOARD->value,
+            PermissionType::VIEW_DOCUMENTS->value,
         ]);
 
         // Employee - Standard User
-        $employee = Role::firstOrCreate(['name' => 'employee']);
+        $employee = Role::firstOrCreate(['name' => RoleType::EMPLOYEE->value]);
         $employee->givePermissionTo([
-            'create leave requests',
-            // 'view own profile' is usually default logic, not permission
+            PermissionType::CREATE_LEAVE_REQUESTS->value,
         ]);
 
         // Payroll - Finance
-        $payroll = Role::firstOrCreate(['name' => 'payroll']);
+        $payroll = Role::firstOrCreate(['name' => RoleType::PAYROLL->value]);
         $payroll->givePermissionTo([
-            'view users',
-            'view attendance', 'export attendance',
-            'view payroll data', 'manage monthly closures',
+            PermissionType::VIEW_USERS->value, PermissionType::VIEW_ALL_USERS->value,
+            PermissionType::VIEW_ATTENDANCE->value, PermissionType::EXPORT_ATTENDANCE->value, PermissionType::VIEW_STATUS_BOARD->value,
+            PermissionType::VIEW_PAYROLL_DATA->value, PermissionType::MANAGE_MONTHLY_CLOSURES->value,
+            PermissionType::VIEW_ALL_LEAVE_REQUESTS->value,
         ]);
     }
 }

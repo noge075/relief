@@ -43,12 +43,18 @@ class LeaveRequestService
             $this->validateHomeOfficeLimit($user, $startDate, $endDate);
         }
 
-        // 3. Szabadság keret vizsgálat (csak ha Vacation)
+        // 3. Munkanapok számítása és validálása
+        $daysCount = $this->calculateWorkingDays($startDate, $endDate);
+        
+        if ($daysCount === 0) {
+            throw ValidationException::withMessages([
+                'date' => __('The selected period contains no working days.')
+            ]);
+        }
+
+        // 4. Szabadság keret vizsgálat (csak ha Vacation)
         if ($type === LeaveType::VACATION) {
-            $daysCount = $this->calculateWorkingDays($startDate, $endDate);
             $this->validateLeaveBalance($user, $daysCount, $startDate->year);
-        } else {
-            $daysCount = $this->calculateWorkingDays($startDate, $endDate);
         }
 
         // Mentés
@@ -90,12 +96,18 @@ class LeaveRequestService
             $this->validateHomeOfficeLimit($user, $startDate, $endDate);
         }
 
-        // 3. Szabadság keret vizsgálat (csak ha Vacation)
+        // 3. Munkanapok számítása és validálása
+        $daysCount = $this->calculateWorkingDays($startDate, $endDate);
+        
+        if ($daysCount === 0) {
+            throw ValidationException::withMessages([
+                'date' => __('The selected period contains no working days.')
+            ]);
+        }
+
+        // 4. Szabadság keret vizsgálat (csak ha Vacation)
         if ($type === LeaveType::VACATION) {
-            $daysCount = $this->calculateWorkingDays($startDate, $endDate);
             $this->validateLeaveBalance($user, $daysCount, $startDate->year, $id);
-        } else {
-            $daysCount = $this->calculateWorkingDays($startDate, $endDate);
         }
 
         // Adatok frissítése
@@ -115,10 +127,6 @@ class LeaveRequestService
             if (!$request) {
                 throw new \Exception(__('Request not found.'));
             }
-
-            // Jogosultság ellenőrzés (Manager vagy HR)
-            // Ezt a Livewire komponensben vagy Policy-ban kellene, de itt is lehet egy extra check.
-            // if ($approver->id !== $request->user->manager_id && !$approver->hasRole('hr')) ...
 
             $this->leaveRequestRepository->updateStatus($request, LeaveStatus::APPROVED->value);
 
