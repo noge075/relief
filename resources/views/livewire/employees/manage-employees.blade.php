@@ -1,6 +1,9 @@
-<div class="space-y-6">
+<div class="flex flex-col gap-6">
     <div class="flex justify-between items-center">
-        <flux:heading size="xl">{{ __('Employees') }}</flux:heading>
+        <div>
+            <flux:heading size="xl">{{ __('Employees') }}</flux:heading>
+            <flux:subheading>{{ __('Manage employees and their data') }}</flux:subheading>
+        </div>
         @can('create users')
             <flux:button variant="primary" icon="plus" wire:click="openCreate">{{ __('New Employee') }}</flux:button>
         @endcan

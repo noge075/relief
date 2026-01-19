@@ -226,5 +226,6 @@
     "Approved Requests": "Elfogadott kérelmek",
     "Approved": "Elfogadva",
     "Pending": "Függő",
-    "Pending requests will reduce this": "A függő kérelmek csökkenteni fogják ezt."
+    "Pending requests will reduce this": "A függő kérelmek csökkenteni fogják ezt.",
+    "Manage employees and their data": "Munkatársak és adataik szerkesztése"
 }
