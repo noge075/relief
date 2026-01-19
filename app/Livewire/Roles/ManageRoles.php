@@ -3,6 +3,7 @@
 namespace App\Livewire\Roles;
 
 use App\Enums\PermissionType;
+use App\Livewire\Traits\WithSorting;
 use App\Services\RoleService;
 use Flux\Flux;
 use Livewire\Component;
@@ -13,7 +14,9 @@ class ManageRoles extends Component
 {
     use AuthorizesRequests;
     use WithPagination;
+    use WithSorting;
 
+    public $search = '';
     public $permissions;
     
     // Form properties
@@ -40,6 +43,12 @@ class ManageRoles extends Component
     {
         $this->authorize(PermissionType::MANAGE_SETTINGS->value);
         $this->permissions = $this->roleService->getGroupedPermissions();
+        $this->sortCol = 'name';
+    }
+
+    public function updatedSearch()
+    {
+        $this->resetPage();
     }
 
     public function create()
@@ -98,7 +107,7 @@ class ManageRoles extends Component
     public function render()
     {
         return view('livewire.roles.manage-roles', [
-            'roles' => $this->roleService->getPaginatedRoles(10),
+            'roles' => $this->roleService->getPaginatedRoles(10, $this->search, $this->sortCol, $this->sortAsc),
         ])->title(__('Manage Roles'));
     }
 }

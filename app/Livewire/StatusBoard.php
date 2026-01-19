@@ -9,9 +9,11 @@ use App\Models\User;
 use App\Services\StatusBoardService;
 use Carbon\Carbon;
 use Livewire\Attributes\Title;
+use Livewire\Attributes\Lazy;
 use Livewire\Component;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 
+#[Lazy]
 class StatusBoard extends Component
 {
     use AuthorizesRequests;
@@ -37,6 +39,11 @@ class StatusBoard extends Component
         // Alapértelmezetten az aktuális hét
         $this->startDate = Carbon::now()->startOfWeek()->format('Y-m-d');
         $this->endDate = Carbon::now()->endOfWeek()->format('Y-m-d');
+    }
+
+    public function placeholder()
+    {
+        return view('livewire.placeholders.status-board');
     }
 
     public function updatedStartDate()

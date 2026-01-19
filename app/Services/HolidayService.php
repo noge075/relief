@@ -120,7 +120,7 @@ class HolidayService
     /**
      * Visszaadja a nyers adatokat (Spatie + DB) adminisztrációhoz.
      */
-    public function getRawSpecialDays(int $year): array
+    public function getRawSpecialDays(int $year, ?string $search = null, string $sortCol = 'date', bool $sortAsc = true): array
     {
         $days = [];
 
@@ -153,7 +153,27 @@ class HolidayService
             ];
         }
 
-        ksort($days);
+        // Szűrés
+        if ($search) {
+            $days = array_filter($days, function ($day) use ($search) {
+                return stripos($day['name'], $search) !== false || stripos($day['date'], $search) !== false;
+            });
+        }
+
+        // Rendezés
+        usort($days, function ($a, $b) use ($sortCol, $sortAsc) {
+            $valA = $a[$sortCol] ?? '';
+            $valB = $b[$sortCol] ?? '';
+            
+            if ($valA == $valB) return 0;
+            
+            if ($sortAsc) {
+                return $valA < $valB ? -1 : 1;
+            } else {
+                return $valA > $valB ? -1 : 1;
+            }
+        });
+
         return $days;
     }
 

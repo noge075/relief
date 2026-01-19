@@ -16,9 +16,9 @@ class RoleService
         return $this->roleRepository->all();
     }
 
-    public function getPaginatedRoles(int $perPage = 10): LengthAwarePaginator
+    public function getPaginatedRoles(int $perPage = 10, ?string $search = null, string $sortCol = 'name', bool $sortAsc = true): LengthAwarePaginator
     {
-        return $this->roleRepository->getPaginated($perPage);
+        return $this->roleRepository->getPaginated($perPage, $search, $sortCol, $sortAsc);
     }
 
     public function getAllPermissions(): Collection

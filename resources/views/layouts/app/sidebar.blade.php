@@ -11,9 +11,14 @@
             </flux:sidebar.header>
 
             <flux:sidebar.nav>
-                <flux:sidebar.group :heading="__('Platform')" class="grid">
+                <!-- General -->
+                <flux:sidebar.group :heading="__('General')" class="grid">
                     <flux:sidebar.item icon="home" :href="route('dashboard')" :current="request()->routeIs('dashboard')" wire:navigate>
                         {{ __('Dashboard') }}
+                    </flux:sidebar.item>
+
+                    <flux:sidebar.item icon="clock" :href="route('attendance.index')" :current="request()->routeIs('attendance.index')" wire:navigate>
+                        {{ __('Attendance') }}
                     </flux:sidebar.item>
 
                     @can('view status board')
@@ -21,47 +26,57 @@
                             {{ __('Status Board') }}
                         </flux:sidebar.item>
                     @endcan
+                </flux:sidebar.group>
 
-                    @can('view users')
-                        <flux:sidebar.item icon="users" :href="route('employees.index')" :current="request()->routeIs('employees.index')" wire:navigate>
-                            {{ __('Employees') }}
-                        </flux:sidebar.item>
-                    @endcan
+                <!-- Management -->
+                @if(auth()->user()->can('view users') || auth()->user()->can('approve leave requests') || auth()->user()->can('adjust leave balances') || auth()->user()->can('view payroll data') || auth()->user()->can('manage work schedules'))
+                    <flux:sidebar.group :heading="__('Management')" class="grid">
+                        @can('view users')
+                            <flux:sidebar.item icon="users" :href="route('employees.index')" :current="request()->routeIs('employees.index')" wire:navigate>
+                                {{ __('Employees') }}
+                            </flux:sidebar.item>
+                        @endcan
 
-                    @can('approve leave requests')
-                        <flux:sidebar.item icon="check-badge" :href="route('approvals.index')" :current="request()->routeIs('approvals.index')" wire:navigate>
-                            {{ __('Approvals') }}
-                        </flux:sidebar.item>
-                    @endcan
+                        @can('approve leave requests')
+                            <flux:sidebar.item icon="check-badge" :href="route('approvals.index')" :current="request()->routeIs('approvals.index')" wire:navigate>
+                                {{ __('Approvals') }}
+                            </flux:sidebar.item>
+                        @endcan
 
-                    @can('adjust leave balances')
-                        <flux:sidebar.item icon="scale" :href="route('employees.balances')" :current="request()->routeIs('employees.balances')" wire:navigate>
-                            {{ __('Manage Leave Balances') }}
-                        </flux:sidebar.item>
-                    @endcan
+                        @can('adjust leave balances')
+                            <flux:sidebar.item icon="scale" :href="route('employees.balances')" :current="request()->routeIs('employees.balances')" wire:navigate>
+                                {{ __('Leave Balances') }}
+                            </flux:sidebar.item>
+                        @endcan
 
-                    @can('manage settings')
+                        @can('manage work schedules')
+                            <flux:sidebar.item icon="clock" :href="route('work-schedules.index')" :current="request()->routeIs('work-schedules.index')" wire:navigate>
+                                {{ __('Work Schedules') }}
+                            </flux:sidebar.item>
+                        @endcan
+
+                        @can('view payroll data')
+                            <flux:sidebar.item icon="document-chart-bar" :href="route('payroll.report')" :current="request()->routeIs('payroll.report')" wire:navigate>
+                                {{ __('Monthly Report') }}
+                            </flux:sidebar.item>
+                        @endcan
+                    </flux:sidebar.group>
+                @endif
+
+                <!-- Settings -->
+                @can('manage settings')
+                    <flux:sidebar.group :heading="__('Settings')" class="grid">
                         <flux:sidebar.item icon="lock-closed" :href="route('settings.roles')" :current="request()->routeIs('settings.roles')" wire:navigate>
                             {{ __('Roles & Permissions') }}
                         </flux:sidebar.item>
                         <flux:sidebar.item icon="calendar-days" :href="route('settings.special-days')" :current="request()->routeIs('settings.special-days')" wire:navigate>
-                            {{ __('Manage Special Days') }}
+                            {{ __('Special Days') }}
                         </flux:sidebar.item>
-                    @endcan
-                </flux:sidebar.group>
+                    </flux:sidebar.group>
+                @endcan
             </flux:sidebar.nav>
 
             <flux:spacer />
-
-            <flux:sidebar.nav>
-                <flux:sidebar.item icon="folder-git-2" href="https://github.com/laravel/livewire-starter-kit" target="_blank">
-                    {{ __('Repository') }}
-                </flux:sidebar.item>
-
-                <flux:sidebar.item icon="book-open-text" href="https://laravel.com/docs/starter-kits#livewire" target="_blank">
-                    {{ __('Documentation') }}
-                </flux:sidebar.item>
-            </flux:sidebar.nav>
 
             <x-desktop-user-menu class="hidden lg:block" :name="auth()->user()->name" />
         </flux:sidebar>
