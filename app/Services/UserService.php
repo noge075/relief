@@ -15,19 +15,16 @@ class UserService
         protected UserRepositoryInterface $userRepository
     ) {}
 
-    public function getEmployeesList(User $actor, int $perPage = 10, ?string $search = null): LengthAwarePaginator
+    public function getEmployeesList(User $actor, int $perPage = 10, array $filters = [], string $sortCol = 'name', bool $sortAsc = true): LengthAwarePaginator
     {
         if ($actor->can('view all users')) {
-            return $this->userRepository->getPaginated($perPage, $search);
+            return $this->userRepository->getPaginated($perPage, $filters, $sortCol, $sortAsc);
         }
 
-        // Ha nincs 'view all users', de van 'view users', akkor feltételezzük, hogy Manager (vagy csak beosztottakat láthat)
         if ($actor->can('view users')) {
-            return $this->userRepository->getSubordinatesPaginated($actor->id, $perPage, $search);
+            return $this->userRepository->getSubordinatesPaginated($actor->id, $perPage, $filters, $sortCol, $sortAsc);
         }
 
-        // Ha nincs joga, üres lista (vagy exception, de a Livewire komponens már ellenőrizte a 'view users'-t)
-        // De a biztonság kedvéért:
         return new LengthAwarePaginator([], 0, $perPage);
     }
 
@@ -36,10 +33,17 @@ class UserService
         return DB::transaction(function () use ($data) {
             $data['password'] = Hash::make($data['password'] ?? 'password');
             $roleName = $data['role'] ?? RoleType::EMPLOYEE->value;
+            $permissions = $data['permissions'] ?? [];
+            
             unset($data['role']);
+            unset($data['permissions']);
 
             $user = $this->userRepository->create($data);
             $this->userRepository->syncRoles($user, [$roleName]);
+            
+            if (!empty($permissions)) {
+                $this->userRepository->syncPermissions($user, $permissions);
+            }
 
             return $user;
         });
@@ -48,7 +52,6 @@ class UserService
     public function updateEmployee(int $id, array $data): bool
     {
         return DB::transaction(function () use ($id, $data) {
-            // Only hash password if it's being changed
             if (!empty($data['password'])) {
                 $data['password'] = Hash::make($data['password']);
             } else {
@@ -56,13 +59,23 @@ class UserService
             }
 
             $roleName = $data['role'] ?? null;
+            $permissions = $data['permissions'] ?? null;
+            
             unset($data['role']);
+            unset($data['permissions']);
 
             $updated = $this->userRepository->update($id, $data);
 
-            if ($updated && $roleName) {
+            if ($updated) {
                 $user = $this->userRepository->find($id);
-                $this->userRepository->syncRoles($user, [$roleName]);
+                
+                if ($roleName) {
+                    $this->userRepository->syncRoles($user, [$roleName]);
+                }
+                
+                if ($permissions !== null) {
+                    $this->userRepository->syncPermissions($user, $permissions);
+                }
             }
 
             return $updated;

@@ -45,21 +45,36 @@ class EloquentLeaveBalanceRepository extends BaseRepository implements LeaveBala
             ->decrement('used', $days);
     }
 
-    public function getPaginated(int $year, ?string $search = null, int $perPage = 10): LengthAwarePaginator
+    public function getPaginated(int $year, array $filters = [], int $perPage = 10, string $sortCol = 'name', bool $sortAsc = true): LengthAwarePaginator
     {
         $query = LeaveBalance::with('user')
             ->where('year', $year);
 
-        if ($search) {
+        if (!empty($filters['search'])) {
+            $search = $filters['search'];
             $query->whereHas('user', function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%");
             });
         }
 
+        if (!empty($filters['department_id'])) {
+            $query->whereHas('user', function ($q) use ($filters) {
+                $q->where('department_id', $filters['department_id']);
+            });
+        }
+
+        if ($sortCol === 'name') {
+            $query->join('users', 'leave_balances.user_id', '=', 'users.id')
+                ->orderBy('users.name', $sortAsc ? 'asc' : 'desc')
+                ->select('leave_balances.*');
+        } else {
+            $query->orderBy($sortCol, $sortAsc ? 'asc' : 'desc');
+        }
+
         return $query->paginate($perPage);
     }
 
-    public function getPaginatedForManager(int $managerId, int $year, ?string $search = null, int $perPage = 10): LengthAwarePaginator
+    public function getPaginatedForManager(int $managerId, int $year, array $filters = [], int $perPage = 10, string $sortCol = 'name', bool $sortAsc = true): LengthAwarePaginator
     {
         $query = LeaveBalance::with('user')
             ->where('year', $year)
@@ -67,10 +82,25 @@ class EloquentLeaveBalanceRepository extends BaseRepository implements LeaveBala
                 $q->where('manager_id', $managerId);
             });
 
-        if ($search) {
+        if (!empty($filters['search'])) {
+            $search = $filters['search'];
             $query->whereHas('user', function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%");
             });
+        }
+
+        if (!empty($filters['department_id'])) {
+            $query->whereHas('user', function ($q) use ($filters) {
+                $q->where('department_id', $filters['department_id']);
+            });
+        }
+
+        if ($sortCol === 'name') {
+            $query->join('users', 'leave_balances.user_id', '=', 'users.id')
+                ->orderBy('users.name', $sortAsc ? 'asc' : 'desc')
+                ->select('leave_balances.*');
+        } else {
+            $query->orderBy($sortCol, $sortAsc ? 'asc' : 'desc');
         }
 
         return $query->paginate($perPage);

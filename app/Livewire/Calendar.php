@@ -9,9 +9,11 @@ use Flux\Flux;
 use Illuminate\Validation\ValidationException;
 use Livewire\Component;
 use Livewire\Attributes\Computed;
+use Livewire\Attributes\Lazy;
 use Carbon\Carbon;
 use Carbon\CarbonImmutable;
 
+#[Lazy]
 class Calendar extends Component
 {
     public $date;
@@ -40,6 +42,11 @@ class Calendar extends Component
     public function mount()
     {
         $this->date = CarbonImmutable::now()->startOfMonth()->format('Y-m-d');
+    }
+
+    public function placeholder()
+    {
+        return view('livewire.placeholders.calendar');
     }
 
     // --- Navigáció ---

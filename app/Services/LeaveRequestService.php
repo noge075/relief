@@ -25,7 +25,7 @@ class LeaveRequestService
         $endDate = Carbon::parse($data['end_date']);
         $type = LeaveType::from($data['type']);
         
-        // 1. Átfedés vizsgálat
+        // 1. Átfedés vizsgálat (Saját magával) - Ez HIBA, nem warning
         $overlapping = $this->leaveRequestRepository->findOverlapping(
             $user->id, 
             $startDate->format('Y-m-d'), 
@@ -38,12 +38,7 @@ class LeaveRequestService
             ]);
         }
 
-        // 2. HO szabály vizsgálat
-        if ($type === LeaveType::HOME_OFFICE) {
-            $this->validateHomeOfficeLimit($user, $startDate, $endDate);
-        }
-
-        // 3. Munkanapok számítása és validálása
+        // 2. Munkanapok számítása és validálása - Ez is HIBA
         $daysCount = $this->calculateWorkingDays($startDate, $endDate);
         
         if ($daysCount === 0) {
@@ -52,15 +47,37 @@ class LeaveRequestService
             ]);
         }
 
-        // 4. Szabadság keret vizsgálat (csak ha Vacation)
+        // 3. Szabadság keret vizsgálat (csak ha Vacation) - Ez is HIBA
         if ($type === LeaveType::VACATION) {
             $this->validateLeaveBalance($user, $daysCount, $startDate->year);
+        }
+
+        // --- WARNINGS ---
+        $warnings = [];
+
+        // 4. HO szabály vizsgálat
+        if ($type === LeaveType::HOME_OFFICE) {
+            $hoWarning = $this->checkHomeOfficeLimit($user, $startDate, $endDate);
+            if ($hoWarning) {
+                $warnings[] = $hoWarning;
+            }
+        }
+
+        // 5. Részleg átfedés vizsgálat
+        $deptWarning = $this->checkDepartmentOverlap($user, $startDate, $endDate, $type);
+        if ($deptWarning) {
+            $warnings[] = $deptWarning;
         }
 
         // Mentés
         $data['user_id'] = $user->id;
         $data['status'] = LeaveStatus::PENDING->value;
         $data['days_count'] = $daysCount;
+        
+        if (!empty($warnings)) {
+            $data['has_warning'] = true;
+            $data['warning_message'] = implode(' | ', $warnings);
+        }
 
         return $this->leaveRequestRepository->create($data);
     }
@@ -77,12 +94,12 @@ class LeaveRequestService
         $endDate = Carbon::parse($data['end_date']);
         $type = LeaveType::from($data['type']);
 
-        // 1. Átfedés vizsgálat (kivéve saját magát)
+        // 1. Átfedés vizsgálat
         $overlapping = $this->leaveRequestRepository->findOverlapping(
             $user->id,
             $startDate->format('Y-m-d'),
             $endDate->format('Y-m-d'),
-            $id // excludeId
+            $id
         );
 
         if ($overlapping->isNotEmpty()) {
@@ -91,12 +108,7 @@ class LeaveRequestService
             ]);
         }
 
-        // 2. HO szabály vizsgálat
-        if ($type === LeaveType::HOME_OFFICE) {
-            $this->validateHomeOfficeLimit($user, $startDate, $endDate);
-        }
-
-        // 3. Munkanapok számítása és validálása
+        // 2. Munkanapok
         $daysCount = $this->calculateWorkingDays($startDate, $endDate);
         
         if ($daysCount === 0) {
@@ -105,16 +117,39 @@ class LeaveRequestService
             ]);
         }
 
-        // 4. Szabadság keret vizsgálat (csak ha Vacation)
+        // 3. Keret
         if ($type === LeaveType::VACATION) {
             $this->validateLeaveBalance($user, $daysCount, $startDate->year, $id);
         }
 
+        // --- WARNINGS ---
+        $warnings = [];
+
+        if ($type === LeaveType::HOME_OFFICE) {
+            $hoWarning = $this->checkHomeOfficeLimit($user, $startDate, $endDate);
+            if ($hoWarning) {
+                $warnings[] = $hoWarning;
+            }
+        }
+
+        $deptWarning = $this->checkDepartmentOverlap($user, $startDate, $endDate, $type, $id);
+        if ($deptWarning) {
+            $warnings[] = $deptWarning;
+        }
+
         // Adatok frissítése
-        $data['status'] = LeaveStatus::PENDING->value; // Újra jóváhagyás kell
+        $data['status'] = LeaveStatus::PENDING->value;
         $data['days_count'] = $daysCount;
         $data['manager_comment'] = null;
         $data['approver_id'] = null;
+        
+        if (!empty($warnings)) {
+            $data['has_warning'] = true;
+            $data['warning_message'] = implode(' | ', $warnings);
+        } else {
+            $data['has_warning'] = false;
+            $data['warning_message'] = null;
+        }
 
         return $this->leaveRequestRepository->update($id, $data);
     }
@@ -130,7 +165,6 @@ class LeaveRequestService
 
             $this->leaveRequestRepository->updateStatus($request, LeaveStatus::APPROVED->value);
 
-            // Ha Vacation, levonjuk a keretből (növeljük a used-et)
             if ($request->type === LeaveType::VACATION) {
                 $this->leaveBalanceRepository->incrementUsed(
                     $request->user_id,
@@ -155,11 +189,14 @@ class LeaveRequestService
         return $this->leaveRequestRepository->updateStatus($request, LeaveStatus::REJECTED->value, $comment);
     }
 
-    protected function validateHomeOfficeLimit(User $user, Carbon $start, Carbon $end)
+    protected function checkHomeOfficeLimit(User $user, Carbon $start, Carbon $end): ?string
     {
+        // Szabály: 2 hetente 1 nap (gördülő 14 nap)
+        // Ez egy példa implementáció, a pontos szabályt finomítani lehet.
+        
         $daysRequested = $start->diffInDays($end) + 1;
         if ($daysRequested > 1) {
-             // throw ValidationException::withMessages(['type' => 'Only 1 day of Home Office is allowed per request.']);
+             return __('Home Office limit exceeded: Only 1 day allowed per request.');
         }
 
         $checkStart = $start->copy()->subDays(13);
@@ -170,8 +207,45 @@ class LeaveRequestService
             ->whereIn('status', [LeaveStatus::APPROVED, LeaveStatus::PENDING]);
 
         if ($pastHO->isNotEmpty()) {
-             // throw ValidationException::withMessages(['type' => __('Home Office limit exceeded (1 day / 2 weeks).')]);
+             return __('Home Office limit exceeded: 1 day / 2 weeks.');
         }
+        
+        return null;
+    }
+    
+    protected function checkDepartmentOverlap(User $user, Carbon $start, Carbon $end, LeaveType $type, ?int $excludeId = null): ?string
+    {
+        if (!$user->department_id) {
+            return null;
+        }
+
+        // Lekérjük a részleg többi dolgozóját
+        $colleagues = User::where('department_id', $user->department_id)
+            ->where('id', '!=', $user->id)
+            ->pluck('id');
+
+        if ($colleagues->isEmpty()) {
+            return null;
+        }
+
+        // Lekérjük a kollégák átfedő kérelmeit
+        // Ehhez a repository-t kellene bővíteni egy findOverlappingForUsers metódussal, vagy itt query-zni.
+        // Mivel a repository interface-t nem akarom most módosítani, itt használok egy query-t (ami nem szép, de gyors).
+        
+        $overlaps = \App\Models\LeaveRequest::whereIn('user_id', $colleagues)
+            ->whereIn('status', [LeaveStatus::APPROVED->value, LeaveStatus::PENDING->value])
+            ->where('type', $type->value) // Csak azonos típusú (pl. szabi vs szabi)
+            ->where(function ($query) use ($start, $end) {
+                $query->where('start_date', '<=', $end->format('Y-m-d'))
+                      ->where('end_date', '>=', $start->format('Y-m-d'));
+            })
+            ->count();
+
+        if ($overlaps > 0) {
+            return __('Department overlap: :count colleague(s) also absent.', ['count' => $overlaps]);
+        }
+
+        return null;
     }
 
     protected function validateLeaveBalance(User $user, int $daysCount, int $year, ?int $excludeRequestId = null)
@@ -184,7 +258,6 @@ class LeaveRequestService
             ]);
         }
 
-        // Lekérjük a függő kérelmeket
         $pendingRequests = $this->leaveRequestRepository->getForUser($user->id, LeaveStatus::PENDING->value);
         
         $pendingDays = 0;
@@ -208,20 +281,14 @@ class LeaveRequestService
 
     protected function calculateWorkingDays(Carbon $start, Carbon $end)
     {
-        // Ünnepnapok lekérése az időszakra
         $holidays = $this->holidayService->getHolidaysInRange($start, $end);
         $holidayDates = array_keys($holidays);
         
-        // Extra munkanapok
         $extraWorkdays = $this->holidayService->getExtraWorkdaysInRange($start, $end);
         $extraWorkdayDates = array_keys($extraWorkdays);
 
         return $start->diffInDaysFiltered(function (Carbon $date) use ($holidayDates, $extraWorkdayDates) {
             $dateStr = $date->format('Y-m-d');
-            
-            // Munkanap, ha:
-            // 1. Nem hétvége ÉS nem ünnep
-            // 2. VAGY hétvége DE extra munkanap
             
             $isWeekend = $date->isWeekend();
             $isHoliday = in_array($dateStr, $holidayDates);

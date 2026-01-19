@@ -14,27 +14,33 @@ class WorkScheduleSeeder extends Seeder
     public function run(): void
     {
         // 1. Standard Hétfő-Péntek
-        WorkSchedule::create([
-            'name' => 'Standard H-P 8ó',
-            'weekly_pattern' => [
-                'mon' => 8, 'tue' => 8, 'wed' => 8, 'thu' => 8, 'fri' => 8, 'sat' => 0, 'sun' => 0
+        WorkSchedule::firstOrCreate(
+            ['name' => 'Standard H-P 8ó'],
+            [
+                'weekly_pattern' => [
+                    'monday' => 8, 'tuesday' => 8, 'wednesday' => 8, 'thursday' => 8, 'friday' => 8, 'saturday' => 0, 'sunday' => 0
+                ]
             ]
-        ]);
+        );
 
         // 2. Diák Kedd-Csütörtök
-        WorkSchedule::create([
-            'name' => 'Diák Kedd-Csütörtök',
-            'weekly_pattern' => [
-                'mon' => 0, 'tue' => 8, 'wed' => 0, 'thu' => 8, 'fri' => 0, 'sat' => 0, 'sun' => 0
+        WorkSchedule::firstOrCreate(
+            ['name' => 'Diák Kedd-Csütörtök'],
+            [
+                'weekly_pattern' => [
+                    'monday' => 0, 'tuesday' => 4, 'wednesday' => 0, 'thursday' => 4, 'friday' => 0, 'saturday' => 0, 'sunday' => 0
+                ]
             ]
-        ]);
+        );
 
         // 3. Részmunkaidős (4 órás)
-         WorkSchedule::create([
-             'name' => 'Részmunkaidő H-P 4ó',
-             'weekly_pattern' => [
-                 'mon' => 4, 'tue' => 4, 'wed' => 4, 'thu' => 4, 'fri' => 4, 'sat' => 0, 'sun' => 0
+         WorkSchedule::firstOrCreate(
+             ['name' => 'Részmunkaidő H-P 4ó'],
+             [
+                 'weekly_pattern' => [
+                     'monday' => 4, 'tuesday' => 4, 'wednesday' => 4, 'thursday' => 4, 'friday' => 4, 'saturday' => 0, 'sunday' => 0
+                 ]
              ]
-         ]);
+         );
     }
 }

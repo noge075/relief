@@ -10,5 +10,5 @@ interface RoleRepositoryInterface extends BaseRepositoryInterface
 {
     public function syncPermissions(Role $role, array $permissions): Role;
     public function getAllPermissions(): Collection;
-    public function getPaginated(int $perPage = 10): LengthAwarePaginator;
+    public function getPaginated(int $perPage = 10, ?string $search = null, string $sortCol = 'name', bool $sortAsc = true): LengthAwarePaginator;
 }

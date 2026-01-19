@@ -18,7 +18,7 @@ interface LeaveRequestRepositoryInterface extends BaseRepositoryInterface
     public function getPendingForManager(int $managerId): Collection;
     
     // Új: Paginált lista a jóváhagyásokhoz (ha managerId null, akkor mindenki)
-    public function getPendingRequests(?int $managerId = null, int $perPage = 10): LengthAwarePaginator;
+    public function getPendingRequests(?int $managerId = null, int $perPage = 10, array $filters = [], string $sortCol = 'start_date', bool $sortAsc = true): LengthAwarePaginator;
 
     // Átfedés vizsgálat: van-e már kérelme az adott időszakra?
     // Fontos: a saját magát (excludeId) ki kell tudni zárni update esetén

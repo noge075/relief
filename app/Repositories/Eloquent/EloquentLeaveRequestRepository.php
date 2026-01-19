@@ -49,7 +49,7 @@ class EloquentLeaveRequestRepository extends BaseRepository implements LeaveRequ
             ->get();
     }
 
-    public function getPendingRequests(?int $managerId = null, int $perPage = 10): LengthAwarePaginator
+    public function getPendingRequests(?int $managerId = null, int $perPage = 10, array $filters = [], string $sortCol = 'start_date', bool $sortAsc = true): LengthAwarePaginator
     {
         $query = LeaveRequest::with('user')
             ->where('status', LeaveStatus::PENDING->value);
@@ -60,7 +60,26 @@ class EloquentLeaveRequestRepository extends BaseRepository implements LeaveRequ
             });
         }
 
-        return $query->orderBy('start_date', 'asc')->paginate($perPage);
+        if (!empty($filters['search'])) {
+            $search = $filters['search'];
+            $query->whereHas('user', function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%");
+            });
+        }
+
+        if (!empty($filters['type'])) {
+            $query->where('type', $filters['type']);
+        }
+
+        if ($sortCol === 'name') {
+            $query->join('users', 'leave_requests.user_id', '=', 'users.id')
+                ->orderBy('users.name', $sortAsc ? 'asc' : 'desc')
+                ->select('leave_requests.*');
+        } else {
+            $query->orderBy($sortCol, $sortAsc ? 'asc' : 'desc');
+        }
+
+        return $query->paginate($perPage);
     }
 
     public function findOverlapping(int $userId, string $start, string $end, ?int $excludeId = null): Collection

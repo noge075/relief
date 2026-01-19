@@ -13,11 +13,11 @@ enum RoleType: string
     public function label(): string
     {
         return match($this) {
-            self::SUPER_ADMIN => 'Super Admin',
-            self::HR => 'HR',
-            self::MANAGER => 'Manager',
-            self::EMPLOYEE => 'Employee',
-            self::PAYROLL => 'Payroll',
+            self::SUPER_ADMIN => __('Super Admin'),
+            self::HR => __('HR'),
+            self::MANAGER => __('Manager'),
+            self::EMPLOYEE => __('Employee'),
+            self::PAYROLL => __('Payroll'),
         };
     }
 }

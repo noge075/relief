@@ -4,59 +4,65 @@
             <flux:heading size="xl">{{ __('Status Board') }}</flux:heading>
             <flux:subheading>{{ __('Who is where?') }}</flux:subheading>
         </div>
-
-        <div class="flex flex-wrap gap-2">
-            <flux:input wire:model.live="startDate" type="date" label="{{ __('Start Date') }}" icon="calendar" class="w-full sm:w-40" />
-            <flux:input wire:model.live="endDate" type="date" label="{{ __('End Date') }}" icon="calendar" class="w-full sm:w-40" />
-        </div>
-
-        <!-- Filters -->
-        <div class="flex flex-col sm:flex-row gap-4 w-full lg:w-auto items-end">
-            <flux:input wire:model.live.debounce.300ms="search" icon="magnifying-glass" placeholder="{{ __('Search by name...') }}" class="w-full sm:w-48" />
-
-            <flux:select wire:model.live="departmentId" label="{{ __('Department') }}" placeholder="{{ __('All Departments') }}" icon="building-office" class="w-full sm:w-48">
-                <flux:select.option value="">{{ __('All Departments') }}</flux:select.option>
-                @foreach($departments as $dept)
-                    <flux:select.option value="{{ $dept->id }}">{{ $dept->name }}</flux:select.option>
-                @endforeach
-            </flux:select>
-
-            <flux:select wire:model.live="managerId" label="{{ __('Manager') }}" placeholder="{{ __('All Managers') }}" icon="user-group" class="w-full sm:w-48">
-                <flux:select.option value="">{{ __('All Managers') }}</flux:select.option>
-                @foreach($managers as $manager)
-                    <flux:select.option value="{{ $manager->id }}">{{ $manager->name }}</flux:select.option>
-                @endforeach
-            </flux:select>
-
-            @if($departmentId || $managerId || $search)
-                <flux:button wire:click="clearFilters" variant="ghost" icon="x-mark" class="text-red-500 hover:text-red-600">{{ __('Clear') }}</flux:button>
-            @endif
-        </div>
     </div>
 
-    <!-- Navigation & Info -->
-    <div class="flex flex-col md:flex-row justify-between items-center bg-zinc-50 dark:bg-zinc-800 p-2 rounded-lg border border-zinc-200 dark:border-zinc-700 gap-4">
-        <div class="flex items-center justify-between w-full md:w-auto gap-4">
-            <flux:button icon="chevron-left" wire:click="prevPeriod" variant="ghost" size="sm" />
-            <div class="font-medium text-sm flex items-center gap-2">
-                <flux:icon name="calendar-days" class="w-4 h-4 text-zinc-400" />
-                {{ $periodStart->translatedFormat('M d.') }} - {{ $periodEnd->translatedFormat('M d.') }}
+    <!-- Toolbar & Navigation -->
+    <div class="flex flex-col gap-4 bg-white dark:bg-zinc-900 p-4 rounded-xl border border-zinc-200 dark:border-zinc-700 shadow-sm">
+
+        <!-- Top Row: Date & Navigation -->
+        <div class="flex flex-col lg:flex-row justify-between items-center gap-4 border-b border-zinc-100 dark:border-zinc-800 pb-4">
+            <div class="flex flex-col sm:flex-row gap-4 w-full lg:w-auto items-center">
+                <flux:input wire:model.live="startDate" type="date" label="{{ __('Start Date') }}" icon="calendar" class="w-full sm:w-40" />
+                <flux:input wire:model.live="endDate" type="date" label="{{ __('End Date') }}" icon="calendar" class="w-full sm:w-40" />
             </div>
-            <div class="flex gap-2">
-                <flux:button wire:click="today" variant="subtle" size="sm">{{ __('Today') }}</flux:button>
-                <flux:button icon="chevron-right" wire:click="nextPeriod" variant="ghost" size="sm" />
+
+            <div class="flex items-center gap-4 w-full lg:w-auto justify-between lg:justify-end">
+                <flux:button icon="chevron-left" wire:click="prevPeriod" variant="ghost" size="sm" />
+                <div class="font-medium text-sm flex items-center gap-2 whitespace-nowrap">
+                    <flux:icon name="calendar-days" class="w-4 h-4 text-zinc-400" />
+                    {{ $periodStart->translatedFormat('M d.') }} - {{ $periodEnd->translatedFormat('M d.') }}
+                </div>
+                <div class="flex gap-2">
+                    <flux:button wire:click="today" variant="subtle" size="sm">{{ __('Today') }}</flux:button>
+                    <flux:button icon="chevron-right" wire:click="nextPeriod" variant="ghost" size="sm" />
+                </div>
             </div>
         </div>
 
-        <!-- Stats -->
-        <div class="flex gap-6 text-sm font-medium px-2">
-            <div class="flex items-center gap-2 text-yellow-600 dark:text-yellow-500" title="{{ __('Pending Requests') }}">
-                <flux:icon name="clock" class="w-4 h-4" />
-                <span>{{ __('Pending') }}: <strong>{{ $stats['pending'] }}</strong></span>
+        <!-- Bottom Row: Filters & Stats -->
+        <div class="flex flex-col lg:flex-row justify-between items-end gap-4">
+            <div class="flex flex-col sm:flex-row gap-4 w-full lg:w-auto items-end flex-wrap">
+                <flux:input wire:model.live.debounce.300ms="search" icon="magnifying-glass" placeholder="{{ __('Search by name...') }}" class="w-full sm:w-48" />
+
+                <flux:select wire:model.live="departmentId" label="{{ __('Department') }}" placeholder="{{ __('All Departments') }}" icon="building-office" class="w-full sm:w-48">
+                    <flux:select.option value="">{{ __('All Departments') }}</flux:select.option>
+                    @foreach($departments as $dept)
+                        <flux:select.option value="{{ $dept->id }}">{{ $dept->name }}</flux:select.option>
+                    @endforeach
+                </flux:select>
+
+                <flux:select wire:model.live="managerId" label="{{ __('Manager') }}" placeholder="{{ __('All Managers') }}" icon="user-group" class="w-full sm:w-48">
+                    <flux:select.option value="">{{ __('All Managers') }}</flux:select.option>
+                    @foreach($managers as $manager)
+                        <flux:select.option value="{{ $manager->id }}">{{ $manager->name }}</flux:select.option>
+                    @endforeach
+                </flux:select>
+
+                @if($departmentId || $managerId || $search)
+                    <flux:button wire:click="clearFilters" variant="ghost" icon="x-mark" class="text-red-500 hover:text-red-600">{{ __('Clear') }}</flux:button>
+                @endif
             </div>
-            <div class="flex items-center gap-2 text-green-600 dark:text-green-500" title="{{ __('Approved Requests') }}">
-                <flux:icon name="check-circle" class="w-4 h-4" />
-                <span>{{ __('Approved') }}: <strong>{{ $stats['approved'] }}</strong></span>
+
+            <!-- Stats -->
+            <div class="flex gap-6 text-sm font-medium px-2 pt-2 lg:pt-0 border-t lg:border-t-0 border-zinc-100 dark:border-zinc-800 w-full lg:w-auto justify-end">
+                <div class="flex items-center gap-2 text-yellow-600 dark:text-yellow-500" title="{{ __('Pending Requests') }}">
+                    <flux:icon name="clock" class="w-4 h-4" />
+                    <span>{{ __('Pending') }}: <strong>{{ $stats['pending'] }}</strong></span>
+                </div>
+                <div class="flex items-center gap-2 text-green-600 dark:text-green-500" title="{{ __('Approved Requests') }}">
+                    <flux:icon name="check-circle" class="w-4 h-4" />
+                    <span>{{ __('Approved') }}: <strong>{{ $stats['approved'] }}</strong></span>
+                </div>
             </div>
         </div>
     </div>

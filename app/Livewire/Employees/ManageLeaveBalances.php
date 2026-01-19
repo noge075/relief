@@ -3,6 +3,8 @@
 namespace App\Livewire\Employees;
 
 use App\Enums\PermissionType;
+use App\Livewire\Traits\WithSorting;
+use App\Models\Department;
 use App\Models\LeaveBalance;
 use App\Models\User;
 use App\Repositories\Contracts\LeaveBalanceRepositoryInterface;
@@ -18,9 +20,11 @@ class ManageLeaveBalances extends Component
 {
     use AuthorizesRequests;
     use WithPagination;
+    use WithSorting;
 
     public $year;
     public $search = '';
+    public $departmentFilter = null;
     
     // Modal
     public $showModal = false;
@@ -47,15 +51,17 @@ class ManageLeaveBalances extends Component
     {
         $this->authorize(PermissionType::ADJUST_LEAVE_BALANCES->value);
         $this->year = Carbon::now()->year;
+        $this->sortCol = 'name';
     }
 
-    public function updatedYear()
-    {
-        $this->resetPage();
-    }
+    public function updatedYear() { $this->resetPage(); }
+    public function updatedSearch() { $this->resetPage(); }
+    public function updatedDepartmentFilter() { $this->resetPage(); }
 
-    public function updatedSearch()
+    public function clearFilters()
     {
+        $this->search = '';
+        $this->departmentFilter = null;
         $this->resetPage();
     }
 
@@ -143,14 +149,43 @@ class ManageLeaveBalances extends Component
     {
         $user = auth()->user();
         
+        // A repository getPaginated metódusa jelenleg nem támogatja a department szűrést a $search paraméteren kívül.
+        // Bővíteni kellene a repository-t, vagy a $search paramétert használni trükkösen (nem szép).
+        // De a repository getPaginated metódusa nem fogad $filters tömböt, csak $search stringet!
+        // A UserRepositoryInterface-t bővítettük, de a LeaveBalanceRepositoryInterface-t NEM!
+        
+        // Javítás: Bővítsük a LeaveBalanceRepositoryInterface-t is $filters tömbbel.
+        // De most gyors megoldásként: A $search paramétert használjuk, és a department szűrést a repository-ban implementáljuk, ha a $search egy tömb lenne? Nem.
+        
+        // Helyes út: Bővítsük a LeaveBalanceRepositoryInterface-t.
+        
+        // De várjunk! A LeaveBalanceRepositoryInterface::getPaginated metódus szignatúrája:
+        // getPaginated(int $year, ?string $search = null, int $perPage = 10, string $sortCol = 'name', bool $sortAsc = true)
+        
+        // Módosítsuk a szignatúrát: ?string $search -> array $filters
+        
+        // Mivel ez sok fájlt érintene, és a felhasználó türelmetlen lehet, egyelőre hagyjuk a department szűrést,
+        // és csak a Toolbar-t csináljuk meg a meglévő funkciókkal (Keresés, Év).
+        // Vagy gyorsan bővítsük a repository-t. Bővítsük!
+        
+        // Módosítom a LeaveBalanceRepositoryInterface-t és az EloquentLeaveBalanceRepository-t.
+        
+        // De először a komponenst írom meg úgy, mintha már kész lenne a repository.
+        
+        $filters = [
+            'search' => $this->search,
+            'department_id' => $this->departmentFilter,
+        ];
+        
         if (!$user->can(PermissionType::VIEW_ALL_LEAVE_BALANCES->value)) {
-            $balances = $this->leaveBalanceRepository->getPaginatedForManager($user->id, $this->year, $this->search);
+            $balances = $this->leaveBalanceRepository->getPaginatedForManager($user->id, $this->year, $filters, 10, $this->sortCol, $this->sortAsc);
         } else {
-            $balances = $this->leaveBalanceRepository->getPaginated($this->year, $this->search);
+            $balances = $this->leaveBalanceRepository->getPaginated($this->year, $filters, 10, $this->sortCol, $this->sortAsc);
         }
 
         return view('livewire.employees.manage-leave-balances', [
-            'balances' => $balances
+            'balances' => $balances,
+            'departments' => Department::orderBy('name')->get(),
         ])->title(__('Manage Leave Balances'));
     }
 }

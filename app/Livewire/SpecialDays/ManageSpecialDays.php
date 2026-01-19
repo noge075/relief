@@ -3,6 +3,7 @@
 namespace App\Livewire\SpecialDays;
 
 use App\Enums\PermissionType;
+use App\Livewire\Traits\WithSorting;
 use App\Services\HolidayService;
 use Carbon\Carbon;
 use Flux\Flux;
@@ -15,8 +16,10 @@ class ManageSpecialDays extends Component
 {
     use AuthorizesRequests;
     use WithPagination;
+    use WithSorting;
 
     public $year;
+    public $search = '';
     
     // Form
     public $showModal = false;
@@ -42,6 +45,7 @@ class ManageSpecialDays extends Component
     {
         $this->authorize(PermissionType::MANAGE_SETTINGS->value);
         $this->year = Carbon::now()->year;
+        $this->sortCol = 'date';
     }
 
     public function updatedYear()
@@ -49,8 +53,14 @@ class ManageSpecialDays extends Component
         $this->resetPage();
     }
 
+    public function updatedSearch()
+    {
+        $this->resetPage();
+    }
+
     public function create()
     {
+        $this->authorize(PermissionType::MANAGE_SETTINGS->value);
         $this->reset(['editingId', 'date', 'type', 'description']);
         $this->type = 'holiday';
         $this->showModal = true;
@@ -58,6 +68,7 @@ class ManageSpecialDays extends Component
 
     public function edit($id)
     {
+        $this->authorize(PermissionType::MANAGE_SETTINGS->value);
         $day = $this->holidayService->findSpecialDay($id);
         if ($day) {
             $this->editingId = $day->id;
@@ -70,6 +81,7 @@ class ManageSpecialDays extends Component
 
     public function save()
     {
+        $this->authorize(PermissionType::MANAGE_SETTINGS->value);
         $this->validate();
 
         // Ellenőrizzük, hogy van-e már ilyen dátum (ha új, vagy ha dátumot módosítunk)
@@ -100,13 +112,14 @@ class ManageSpecialDays extends Component
 
     public function delete($id)
     {
+        $this->authorize(PermissionType::MANAGE_SETTINGS->value);
         $this->holidayService->deleteSpecialDay($id);
         Flux::toast(__('Special day deleted.'), variant: 'success');
     }
 
     public function render()
     {
-        $allDays = $this->holidayService->getRawSpecialDays((int) $this->year);
+        $allDays = $this->holidayService->getRawSpecialDays((int) $this->year, $this->search, $this->sortCol, $this->sortAsc);
         
         // Manuális pagináció
         $perPage = 10;
