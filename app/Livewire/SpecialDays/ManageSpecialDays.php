@@ -2,6 +2,7 @@
 
 namespace App\Livewire\SpecialDays;
 
+use App\Enums\PermissionType;
 use App\Services\HolidayService;
 use Carbon\Carbon;
 use Flux\Flux;
@@ -39,7 +40,7 @@ class ManageSpecialDays extends Component
 
     public function mount()
     {
-        $this->authorize('manage settings');
+        $this->authorize(PermissionType::MANAGE_SETTINGS->value);
         $this->year = Carbon::now()->year;
     }
 

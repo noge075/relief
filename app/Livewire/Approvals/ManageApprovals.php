@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Approvals;
 
+use App\Enums\PermissionType;
 use App\Services\LeaveRequestService;
 use App\Repositories\Contracts\LeaveRequestRepositoryInterface;
 use Flux\Flux;
@@ -33,12 +34,12 @@ class ManageApprovals extends Component
 
     public function mount()
     {
-        $this->authorize('approve leave requests');
+        $this->authorize(PermissionType::APPROVE_LEAVE_REQUESTS->value);
     }
 
     public function approve($id)
     {
-        $this->authorize('approve leave requests');
+        $this->authorize(PermissionType::APPROVE_LEAVE_REQUESTS->value);
         
         try {
             $this->leaveRequestService->approveRequest($id, auth()->user());
@@ -50,7 +51,7 @@ class ManageApprovals extends Component
 
     public function openRejectModal($id)
     {
-        $this->authorize('approve leave requests');
+        $this->authorize(PermissionType::APPROVE_LEAVE_REQUESTS->value);
         $this->rejectingId = $id;
         $this->managerComment = '';
         $this->showRejectModal = true;
@@ -58,7 +59,7 @@ class ManageApprovals extends Component
 
     public function reject()
     {
-        $this->authorize('approve leave requests');
+        $this->authorize(PermissionType::APPROVE_LEAVE_REQUESTS->value);
         
         $this->validate([
             'managerComment' => 'required|string|max:255',
@@ -75,22 +76,9 @@ class ManageApprovals extends Component
 
     public function render()
     {
-        // Ha HR, akkor mindenkit láthat? Vagy csak a sajátjait?
-        // A specifikáció szerint: "Közvetlen vezető a saját csapatát".
-        // De a HR általában mindent.
-        // Nézzük meg a jogosultságot. Ha 'manage settings' (HR) joga van, akkor mindent?
-        // Vagy csináljunk egy kapcsolót?
-        // Egyszerűsítsünk: A repository getPendingForManager metódusa a manager_id alapján szűr.
-        // Ha HR, akkor használjunk egy getAllPending metódust (amit létre kell hozni).
-        
         $user = auth()->user();
         
-        if ($user->hasRole('hr') || $user->hasRole('super-admin')) {
-             // HR lát mindent (ehhez kell új repo metódus)
-             // De a getPendingForManager csak managerre szűr.
-             // Használjuk a sima get-et státuszra szűrve, de paginálva.
-             // A repository-ban nincs getAllPendingPaginated.
-             // Hozzuk létre a repository-ban a getPendingRequests($managerId = null) metódust.
+        if ($user->can(PermissionType::VIEW_ALL_LEAVE_REQUESTS->value)) {
              $requests = $this->leaveRequestRepository->getPendingRequests(null); // Mindenki
         } else {
              $requests = $this->leaveRequestRepository->getPendingRequests($user->id);

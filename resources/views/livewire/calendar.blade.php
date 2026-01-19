@@ -44,8 +44,10 @@
         <div class="flex flex-col md:grid md:grid-cols-7">
             @foreach($this->calendarDays as $day)
                 <div
+                    @if(!$day['is_holiday'])
                         wire:click="selectDate('{{ $day['date_string'] }}')"
-                        class="
+                    @endif
+                    class="
                         {{ !$day['is_current_month'] ? 'hidden md:block' : '' }}
 
                         /* MOBIL STÍLUSOK (Lista elem) */
@@ -55,10 +57,9 @@
                         md:block md:min-h-[120px] md:p-2 md:border-b-0 md:border-r
 
                         /* Közös */
-                        relative group transition cursor-pointer
-                        {{ !$day['is_current_month'] ? 'bg-zinc-50/50 dark:bg-zinc-900/50 opacity-40 grayscale' : '' }}
-                        {{ $day['is_weekend'] && $day['is_current_month'] ? 'md:bg-zinc-50/40 md:dark:bg-zinc-800/20' : '' }}
-                        hover:bg-zinc-50 dark:hover:bg-zinc-800
+                        relative group transition
+                        {{ $day['is_holiday'] ? 'cursor-not-allowed opacity-60 bg-zinc-100 dark:bg-zinc-800/50' : 'cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-800' }}
+                        {{ !$day['is_current_month'] && !$day['is_holiday'] ? 'bg-zinc-50/50 dark:bg-zinc-900/50 opacity-40 grayscale' : '' }}
                     "
                 >
                     <div class="flex items-center md:items-start md:justify-between gap-3 md:gap-0 w-full md:w-auto">
@@ -108,7 +109,7 @@
                             <flux:badge
                                     :color="$color"
                                     size="sm"
-                                    class="w-auto md:w-full justify-center md:justify-start truncate"
+                                    class="w-auto md:w-full justify-center md:justify-start truncate cursor-pointer"
                                     wire:click.stop="editEvent('{{ $day['event']->id }}')"
                             >
                                 <span class="mr-1">{{ $type == 'vacation' ? '🏖️' : ($type == 'home_office' ? '🏠' : '💊') }}</span>

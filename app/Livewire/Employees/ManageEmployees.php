@@ -2,6 +2,8 @@
 
 namespace App\Livewire\Employees;
 
+use App\Enums\PermissionType;
+use App\Enums\RoleType;
 use App\Repositories\Contracts\UserRepositoryInterface;
 use App\Services\UserService;
 use App\Models\Department;
@@ -27,11 +29,12 @@ class ManageEmployees extends Component
     public $password = '';
     public $department_id = null;
     public $work_schedule_id = null;
-    public $role = 'employee';
+    public $role;
 
     public function mount()
     {
-        $this->authorize('view users');
+        $this->authorize(PermissionType::VIEW_USERS->value);
+        $this->role = RoleType::EMPLOYEE->value;
     }
 
     public function render(UserService $userService)
@@ -46,7 +49,7 @@ class ManageEmployees extends Component
 
     public function openCreate()
     {
-        $this->authorize('create users');
+        $this->authorize(PermissionType::CREATE_USERS->value);
         $this->resetForm();
         $this->isEditing = false;
         $this->showModal = true;
@@ -54,7 +57,7 @@ class ManageEmployees extends Component
 
     public function openEdit(int $id, UserRepositoryInterface $userRepository)
     {
-        $this->authorize('edit users');
+        $this->authorize(PermissionType::EDIT_USERS->value);
         $this->resetForm();
         $this->isEditing = true;
         $this->editingId = $id;
@@ -65,7 +68,7 @@ class ManageEmployees extends Component
         $this->email = $user->email;
         $this->department_id = $user->department_id;
         $this->work_schedule_id = $user->work_schedule_id;
-        $this->role = $user->roles->first()?->name ?? 'employee';
+        $this->role = $user->roles->first()?->name ?? RoleType::EMPLOYEE->value;
 
         $this->showModal = true;
     }
@@ -73,9 +76,9 @@ class ManageEmployees extends Component
     public function save(UserService $userService)
     {
         if ($this->isEditing) {
-            $this->authorize('edit users');
+            $this->authorize(PermissionType::EDIT_USERS->value);
         } else {
-            $this->authorize('create users');
+            $this->authorize(PermissionType::CREATE_USERS->value);
         }
 
         $rules = [
@@ -108,7 +111,7 @@ class ManageEmployees extends Component
 
     public function delete(int $id, UserService $userService)
     {
-        $this->authorize('delete users');
+        $this->authorize(PermissionType::DELETE_USERS->value);
         $userService->deleteEmployee($id);
         Flux::toast(__('Employee deleted.'), variant: 'danger');
     }
@@ -116,5 +119,6 @@ class ManageEmployees extends Component
     private function resetForm()
     {
         $this->reset(['name', 'email', 'password', 'department_id', 'work_schedule_id', 'role', 'editingId']);
+        $this->role = RoleType::EMPLOYEE->value;
     }
 }

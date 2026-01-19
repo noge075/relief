@@ -15,9 +15,18 @@
                     <flux:sidebar.item icon="home" :href="route('dashboard')" :current="request()->routeIs('dashboard')" wire:navigate>
                         {{ __('Dashboard') }}
                     </flux:sidebar.item>
-                    <flux:sidebar.item icon="users" :href="route('employees.index')" :current="request()->routeIs('employees.index')" wire:navigate>
-                        {{ __('Employees') }}
-                    </flux:sidebar.item>
+
+                    @can('view status board')
+                        <flux:sidebar.item icon="table-cells" :href="route('status-board')" :current="request()->routeIs('status-board')" wire:navigate>
+                            {{ __('Status Board') }}
+                        </flux:sidebar.item>
+                    @endcan
+
+                    @can('view users')
+                        <flux:sidebar.item icon="users" :href="route('employees.index')" :current="request()->routeIs('employees.index')" wire:navigate>
+                            {{ __('Employees') }}
+                        </flux:sidebar.item>
+                    @endcan
 
                     @can('approve leave requests')
                         <flux:sidebar.item icon="check-badge" :href="route('approvals.index')" :current="request()->routeIs('approvals.index')" wire:navigate>
