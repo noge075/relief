@@ -18,6 +18,8 @@ class MonthlyReport extends Component
 
     public $year;
     public $month;
+    
+    public $closure; // MonthlyClosure modell
 
     protected PayrollService $payrollService;
 
@@ -31,6 +33,15 @@ class MonthlyReport extends Component
         $this->authorize(PermissionType::VIEW_PAYROLL_DATA->value);
         $this->year = Carbon::now()->year;
         $this->month = Carbon::now()->month;
+        $this->loadClosureStatus();
+    }
+    
+    public function updatedYear() { $this->loadClosureStatus(); }
+    public function updatedMonth() { $this->loadClosureStatus(); }
+
+    public function loadClosureStatus()
+    {
+        $this->closure = $this->payrollService->getClosureStatus($this->year, $this->month);
     }
 
     public function export()
@@ -40,6 +51,26 @@ class MonthlyReport extends Component
         $filename = 'payroll_report_' . $this->year . '_' . str_pad($this->month, 2, '0', STR_PAD_LEFT) . '.xlsx';
         
         return Excel::download(new MonthlyPayrollExport($this->year, $this->month), $filename);
+    }
+    
+    public function closeMonth()
+    {
+        $this->authorize(PermissionType::MANAGE_MONTHLY_CLOSURES->value);
+        
+        $this->payrollService->closeMonth($this->year, $this->month, auth()->user());
+        $this->loadClosureStatus();
+        
+        Flux::toast(__('Month closed successfully.'), variant: 'success');
+    }
+    
+    public function reopenMonth()
+    {
+        $this->authorize(PermissionType::MANAGE_MONTHLY_CLOSURES->value);
+        
+        $this->payrollService->reopenMonth($this->year, $this->month, auth()->user());
+        $this->loadClosureStatus();
+        
+        Flux::toast(__('Month reopened successfully.'), variant: 'success');
     }
 
     public function render()

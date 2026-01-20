@@ -31,6 +31,15 @@
         </div>
     </div>
 
+    <!-- HO Stats -->
+    <div class="flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-400 bg-blue-50 dark:bg-blue-900/20 p-2 rounded-lg border border-blue-100 dark:border-blue-800">
+        <flux:icon name="home" class="w-4 h-4 text-blue-600 dark:text-blue-400" />
+        <span>
+            {{ __('Home Office (this month): :count days.', ['count' => $hoStats['monthly_used']]) }}
+            <span class="text-zinc-400 ml-1">({{ __('Rule: :limit day(s) / :period days', ['limit' => $hoStats['limit'], 'period' => $hoStats['period']]) }})</span>
+        </span>
+    </div>
+
     <div class="border-t border-zinc-200 dark:border-zinc-700 md:border md:rounded-xl md:overflow-hidden md:shadow-sm bg-white dark:bg-zinc-900">
 
         <div class="hidden md:grid grid-cols-7 bg-zinc-50 dark:bg-zinc-800/50 border-b border-zinc-200 dark:border-zinc-700">

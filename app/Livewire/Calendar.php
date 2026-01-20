@@ -2,6 +2,9 @@
 
 namespace App\Livewire;
 
+use App\Enums\LeaveStatus;
+use App\Enums\LeaveType;
+use App\Models\Setting;
 use App\Repositories\Contracts\LeaveRequestRepositoryInterface;
 use App\Services\LeaveRequestService;
 use App\Services\HolidayService;
@@ -10,6 +13,7 @@ use Illuminate\Validation\ValidationException;
 use Livewire\Component;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Lazy;
+use Livewire\Attributes\On;
 use Carbon\Carbon;
 use Carbon\CarbonImmutable;
 
@@ -143,6 +147,28 @@ class Calendar extends Component
             'requests' => $days->whereNotNull('event')->count(),
         ];
     }
+    
+    public function getHoStats()
+    {
+        $limitDays = (int) (Setting::where('key', 'ho_limit_days')->value('value') ?? 1);
+        $limitPeriod = (int) (Setting::where('key', 'ho_limit_period')->value('value') ?? 14);
+        
+        // Havi statisztika
+        $startOfMonth = Carbon::parse($this->date)->startOfMonth();
+        $endOfMonth = Carbon::parse($this->date)->endOfMonth();
+        
+        $monthlyHO = $this->leaveRequestRepository->getForUserInPeriod(auth()->id(), $startOfMonth->format('Y-m-d'), $endOfMonth->format('Y-m-d'))
+            ->where('type', LeaveType::HOME_OFFICE)
+            ->whereIn('status', [LeaveStatus::APPROVED, LeaveStatus::PENDING]);
+            
+        $monthlyUsed = $monthlyHO->sum('days_count');
+        
+        return [
+            'monthly_used' => $monthlyUsed,
+            'limit' => $limitDays,
+            'period' => $limitPeriod,
+        ];
+    }
 
     public function jumpToDate($year, $month)
     {
@@ -185,26 +211,32 @@ class Calendar extends Component
                 'reason' => 'nullable|string|max:255',
             ]);
 
+            $request = null;
+
             if ($this->editingId) {
-                $leaveRequestService->updateRequest(auth()->user(), $this->editingId, [
+                $request = $leaveRequestService->updateRequest(auth()->user(), $this->editingId, [
                     'type' => $this->requestType,
                     'start_date' => $this->selectedDate,
                     'end_date' => $this->endDate,
                     'reason' => $this->reason,
                 ]);
-                Flux::toast(__('Request updated successfully.'), variant: 'success');
             } else {
-                $leaveRequestService->createRequest(auth()->user(), [
+                $request = $leaveRequestService->createRequest(auth()->user(), [
                     'type' => $this->requestType,
                     'start_date' => $this->selectedDate,
                     'end_date' => $this->endDate,
                     'reason' => $this->reason,
                 ]);
-                Flux::toast(__('Request submitted successfully.'), variant: 'success');
+            }
+            
+            if ($request && $request->has_warning) {
+                Flux::toast(__('Request submitted with warning: ') . $request->warning_message, variant: 'warning');
+            } else {
+                Flux::toast($this->editingId ? __('Request updated successfully.') : __('Request submitted successfully.'), variant: 'success');
             }
             
             $this->showRequestModal = false;
-            $this->dispatch('leave-request-updated'); // Esemény küldése
+            $this->dispatch('leave-request-updated');
         } catch (ValidationException $e) {
             Flux::toast($e->getMessage(), variant: 'danger');
         } catch (\Exception $e) {
@@ -218,14 +250,22 @@ class Calendar extends Component
             $leaveRequestService->deleteRequest($id, auth()->id());
             Flux::toast(__('Request deleted.'), variant: 'success');
             $this->showRequestModal = false;
-            $this->dispatch('leave-request-updated'); // Esemény küldése
+            $this->dispatch('leave-request-updated');
         } catch (\Exception $e) {
             Flux::toast($e->getMessage(), variant: 'danger');
         }
     }
+    
+    #[On('leave-request-updated')]
+    public function refresh()
+    {
+        // Csak újrarenderelést vált ki
+    }
 
     public function render()
     {
-        return view('livewire.calendar');
+        return view('livewire.calendar', [
+            'hoStats' => $this->getHoStats()
+        ]);
     }
 }

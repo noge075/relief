@@ -5,7 +5,7 @@ namespace App\Services;
 use App\Enums\LeaveStatus;
 use App\Enums\LeaveType;
 use App\Enums\PermissionType;
-use App\Enums\RoleType;
+use App\Models\LeaveRequest;
 use App\Models\User;
 use App\Repositories\Contracts\LeaveRequestRepositoryInterface;
 use App\Repositories\Contracts\UserRepositoryInterface;
@@ -22,8 +22,9 @@ class StatusBoardService
 
     public function getStatusMatrix(User $actor, Carbon $start, Carbon $end, array $filters = []): array
     {
-        // 1. Dolgozók lekérése
-        $users = \App\Models\User::where('is_active', true)
+        // 1. Dolgozók lekérése (WorkSchedule betöltésével)
+        $users = User::with('workSchedule')
+            ->where('is_active', true)
             ->when($filters['department_id'] ?? null, function ($q, $id) {
                 $q->where('department_id', $id);
             })
@@ -41,7 +42,7 @@ class StatusBoardService
         $extraWorkdays = $this->holidayService->getExtraWorkdaysInRange($start, $end);
 
         // 3. Szabadságok lekérése (APPROVED és PENDING)
-        $leaveRequests = \App\Models\LeaveRequest::whereIn('user_id', $users->pluck('id'))
+        $leaveRequests = LeaveRequest::whereIn('user_id', $users->pluck('id'))
             ->whereIn('status', [LeaveStatus::APPROVED->value, LeaveStatus::PENDING->value])
             ->where(function ($query) use ($start, $end) {
                 $query->where('start_date', '<=', $end->format('Y-m-d'))
@@ -56,7 +57,6 @@ class StatusBoardService
 
         foreach ($users as $user) {
             // Jogosultság ellenőrzés a részletekhez
-            // Láthatja, ha: Saját maga, VAGY a managere, VAGY van 'view leave request details' joga
             $canViewDetails = $actor->id === $user->id || 
                               $actor->id === $user->manager_id || 
                               $actor->can(PermissionType::VIEW_LEAVE_REQUEST_DETAILS->value);
@@ -65,6 +65,8 @@ class StatusBoardService
                 'user' => $user,
                 'days' => []
             ];
+            
+            $weeklyPattern = $user->workSchedule ? $user->workSchedule->weekly_pattern : null;
 
             foreach ($period as $date) {
                 $dateStr = $date->format('Y-m-d');
@@ -72,23 +74,45 @@ class StatusBoardService
                 $meta = null;
                 $isPending = false;
 
-                // A. Ünnepnap / Hétvége ellenőrzés
+                // A. Munkarend és Ünnepnap ellenőrzés
                 $isWeekend = $date->isWeekend();
                 $isHoliday = isset($holidays[$dateStr]);
                 $isExtraWorkday = isset($extraWorkdays[$dateStr]);
+                
+                $isScheduledWorkday = false;
 
-                if (($isWeekend || $isHoliday) && !$isExtraWorkday) {
-                    $status = 'off'; // Nem munkanap (Szürke)
-                    
+                if ($weeklyPattern) {
+                    // Ha van munkarend, az dönt
+                    $dayName = strtolower($date->format('l')); // monday, tuesday...
+                    if (isset($weeklyPattern[$dayName]) && $weeklyPattern[$dayName] > 0) {
+                        $isScheduledWorkday = true;
+                    }
+                } else {
+                    // Ha nincs, akkor H-P munkanap
+                    $isScheduledWorkday = !$isWeekend;
+                }
+
+                // Ünnepnap felülírja a munkarendet (kivéve extra munkanap)
+                if ($isHoliday && !$isExtraWorkday) {
+                    $isScheduledWorkday = false;
+                }
+                // Extra munkanap mindig munkanap
+                if ($isExtraWorkday) {
+                    $isScheduledWorkday = true;
+                }
+
+                // Státusz beállítása
+                if (!$isScheduledWorkday) {
+                    $status = 'off';
                     if ($isHoliday) {
                         $meta = $holidays[$dateStr]['name'];
                     } elseif ($isWeekend) {
                         $meta = __('Weekend');
+                    } else {
+                        // Munkarend szerint szabadnap (pl. Diák Hétfőn)
+                        $meta = __('Off');
                     }
-                }
-                
-                // Ha extra munkanap, és alapértelmezett státusz, akkor jelezzük
-                if ($isExtraWorkday && $status === 'present') {
+                } elseif ($isExtraWorkday) {
                     $meta = $extraWorkdays[$dateStr]['name'] ?? __('Extra Workday');
                 }
 
@@ -98,7 +122,7 @@ class StatusBoardService
                         if ($date->between($request->start_date, $request->end_date)) {
                             $status = $request->type->value; // vacation, sick, home_office
                             
-                            // Ha láthatja a részleteket, akkor az indoklás, különben null (így a nézet a státusz nevét írja ki)
+                            // Ha láthatja a részleteket, akkor az indoklás, különben null
                             $meta = $canViewDetails ? ($request->reason ?: null) : null;
 
                             $isPending = $request->status === LeaveStatus::PENDING;

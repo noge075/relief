@@ -28,8 +28,8 @@ class RoleAndPermissionSeeder extends Seeder
 
         // 2. Define Roles and Assign Permissions
 
+        // Super Admin - Gets all permissions implicitly via Gate::before in AppServiceProvider
         $superAdmin = Role::firstOrCreate(['name' => RoleType::SUPER_ADMIN->value]);
-        // $superAdmin->givePermissionTo(Permission::all()); // Handled by Gate::before in AppServiceProvider
 
         // HR - Human Resources
         $hr = Role::firstOrCreate(['name' => RoleType::HR->value]);
@@ -42,6 +42,7 @@ class RoleAndPermissionSeeder extends Seeder
             PermissionType::VIEW_ATTENDANCE->value, PermissionType::MANAGE_ATTENDANCE->value, PermissionType::EXPORT_ATTENDANCE->value, PermissionType::VIEW_STATUS_BOARD->value,
             PermissionType::VIEW_DOCUMENTS->value, PermissionType::UPLOAD_DOCUMENTS->value, PermissionType::DELETE_DOCUMENTS->value,
             PermissionType::MANAGE_SETTINGS->value,
+            PermissionType::VIEW_AUDIT_LOGS->value, // Hozzáadva
         ]);
 
         // Manager - Team Lead

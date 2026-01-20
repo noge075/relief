@@ -10,11 +10,14 @@ use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Str;
 use Laravel\Fortify\TwoFactorAuthenticatable;
 use Spatie\Permission\Traits\HasRoles;
+use Spatie\Activitylog\Traits\LogsActivity;
+use Spatie\Activitylog\LogOptions;
+use Lab404\Impersonate\Models\Impersonate;
 
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable, TwoFactorAuthenticatable, HasRoles;
+    use HasFactory, Notifiable, TwoFactorAuthenticatable, HasRoles, LogsActivity, Impersonate;
 
     /**
      * The attributes that are mass assignable.
@@ -24,7 +27,8 @@ class User extends Authenticatable
     protected $fillable = [
         'name', 'email', 'password',
         'employment_type', 'department_id', 'manager_id',
-        'work_schedule_id', 'hired_at', 'is_active'
+        'work_schedule_id', 'hired_at', 'is_active',
+        'signature_path', // Új mező
     ];
 
     /**
@@ -53,6 +57,14 @@ class User extends Authenticatable
             'is_active' => 'boolean',
             'password' => 'hashed',
         ];
+    }
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logFillable()
+            ->logOnlyDirty()
+            ->dontSubmitEmptyLogs();
     }
 
     /**
@@ -96,5 +108,16 @@ class User extends Authenticatable
     // Dokumentumok
     public function attendanceDocuments() {
         return $this->hasMany(AttendanceDocument::class);
+    }
+    
+    // Impersonate jogosultság
+    public function canImpersonate()
+    {
+        return $this->can('view users');
+    }
+
+    public function canBeImpersonated()
+    {
+        return !$this->hasRole('super-admin');
     }
 }

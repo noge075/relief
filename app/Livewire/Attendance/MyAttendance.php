@@ -7,12 +7,14 @@ use App\Enums\LeaveStatus;
 use App\Models\AttendanceLog;
 use App\Repositories\Contracts\LeaveRequestRepositoryInterface;
 use App\Services\HolidayService;
+use App\Services\PayrollService;
 use Carbon\Carbon;
 use Carbon\CarbonPeriod;
 use Flux\Flux;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Validation\ValidationException;
 
 class MyAttendance extends Component
 {
@@ -32,13 +34,16 @@ class MyAttendance extends Component
 
     protected LeaveRequestRepositoryInterface $leaveRequestRepository;
     protected HolidayService $holidayService;
+    protected PayrollService $payrollService;
 
     public function boot(
         LeaveRequestRepositoryInterface $leaveRequestRepository,
-        HolidayService $holidayService
+        HolidayService $holidayService,
+        PayrollService $payrollService
     ) {
         $this->leaveRequestRepository = $leaveRequestRepository;
         $this->holidayService = $holidayService;
+        $this->payrollService = $payrollService;
     }
 
     public function mount()
@@ -59,6 +64,8 @@ class MyAttendance extends Component
 
     public function checkIn()
     {
+        $this->validateMonthlyClosure(Carbon::today());
+
         AttendanceLog::create([
             'user_id' => auth()->id(),
             'date' => Carbon::today(),
@@ -72,6 +79,8 @@ class MyAttendance extends Component
 
     public function checkOut()
     {
+        $this->validateMonthlyClosure(Carbon::today());
+
         if ($this->currentLog) {
             $checkOut = Carbon::now();
             $workedHours = $this->currentLog->check_in->diffInHours($checkOut);
@@ -108,13 +117,14 @@ class MyAttendance extends Component
 
     public function saveLog()
     {
+        $date = Carbon::parse($this->editingDate);
+        $this->validateMonthlyClosure($date);
+
         $this->validate([
             'editingCheckIn' => 'nullable|date_format:H:i',
             'editingCheckOut' => 'nullable|date_format:H:i|after:editingCheckIn',
         ]);
 
-        $date = Carbon::parse($this->editingDate);
-        
         // Check In/Out konvertálása datetime-ra
         $checkIn = $this->editingCheckIn ? $date->copy()->setTimeFromTimeString($this->editingCheckIn) : null;
         $checkOut = $this->editingCheckOut ? $date->copy()->setTimeFromTimeString($this->editingCheckOut) : null;
@@ -141,6 +151,15 @@ class MyAttendance extends Component
         Flux::toast(__('Attendance updated successfully.'), variant: 'success');
         $this->showEditModal = false;
         $this->loadCurrentLog();
+    }
+
+    protected function validateMonthlyClosure(Carbon $date)
+    {
+        if ($this->payrollService->isMonthClosed($date->year, $date->month)) {
+            throw ValidationException::withMessages([
+                'date' => __('This month is closed and cannot be modified.')
+            ]);
+        }
     }
 
     public function render()
@@ -255,8 +274,6 @@ class MyAttendance extends Component
                         $statusType = 'present';
                     } else {
                         // Órabéres/Diák: ha nincs log, de be volt osztva -> Hiányzás? Vagy csak üres.
-                        // A specifikáció szerint "plusz jelenlét", tehát ha nem jön, az nem baj (kivéve ha fix nap).
-                        // Jelöljük, hogy "Scheduled"?
                         $status = __('Scheduled');
                         $statusType = 'scheduled';
                     }

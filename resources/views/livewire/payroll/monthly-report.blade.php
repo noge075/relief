@@ -4,7 +4,28 @@
             <flux:heading size="xl">{{ __('Monthly Report') }}</flux:heading>
             <flux:subheading>{{ __('Payroll data export.') }}</flux:subheading>
         </div>
-        <flux:button variant="primary" icon="arrow-down-tray" wire:click="export">{{ __('Export to Excel') }}</flux:button>
+
+        <div class="flex gap-2 items-center">
+            @if($closure && $closure->is_closed)
+                <div class="flex items-center gap-2 mr-4">
+                    <flux:badge color="red" icon="lock-closed">{{ __('Closed') }}</flux:badge>
+                    <span class="text-xs text-zinc-500">
+                        {{ $closure->closed_at ? \Carbon\Carbon::parse($closure->closed_at)->format('Y.m.d H:i') : '' }}
+                        ({{ $closure->closedBy->name ?? '-' }})
+                    </span>
+                </div>
+
+                @can(\App\Enums\PermissionType::MANAGE_MONTHLY_CLOSURES->value)
+                    <flux:button variant="ghost" icon="lock-open" wire:click="reopenMonth" wire:confirm="{{ __('Are you sure you want to reopen this month?') }}">{{ __('Reopen Month') }}</flux:button>
+                @endcan
+            @else
+                @can(\App\Enums\PermissionType::MANAGE_MONTHLY_CLOSURES->value)
+                    <flux:button variant="danger" icon="lock-closed" wire:click="closeMonth" wire:confirm="{{ __('Are you sure you want to close this month? No further changes will be allowed.') }}">{{ __('Close Month') }}</flux:button>
+                @endcan
+            @endif
+
+            <flux:button variant="primary" icon="arrow-down-tray" wire:click="export">{{ __('Export to Excel') }}</flux:button>
+        </div>
     </div>
 
     <!-- Toolbar -->
