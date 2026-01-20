@@ -38,6 +38,7 @@
     "Fill in the details to save.": "Töltsd ki az adatokat a mentéshez.",
     "Full Name": "Teljes név",
     "Email Address": "Email cím",
+    "Email address": "Email cím",
     "Select...": "Válassz...",
     "Work Schedule": "Munkarend",
     "Password": "Jelszó",
@@ -295,5 +296,10 @@
     "Sunday": "Vasárnap",
     "Employment Types": "Foglalkoztatási típusok",
     "Roles": "Szerepkörök",
-    "All Work Schedules": "Összes munkarend"
+    "All Work Schedules": "Összes munkarend",
+    "Log in to your account": "Bejelentkezés a fiókodba",
+    "Enter your email and password below to log in": "Add meg az e-mail címed és jelszavad a bejelentkezéshez",
+    "Forgot your password?": "Elfelejtetted a jelszavad?",
+    "Remember me": "Emlékezz rám",
+    "Log in": "Bejelentkezés"
 }
