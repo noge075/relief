@@ -5,9 +5,13 @@ namespace App\Models;
 use App\Enums\LeaveStatus;
 use App\Enums\LeaveType;
 use Illuminate\Database\Eloquent\Model;
+use Spatie\Activitylog\Traits\LogsActivity;
+use Spatie\Activitylog\LogOptions;
 
 class LeaveRequest extends Model
 {
+    use LogsActivity;
+
     protected $fillable = [
         'user_id',
         'type',
@@ -25,11 +29,19 @@ class LeaveRequest extends Model
     protected $casts = [
         'start_date' => 'date',
         'end_date' => 'date',
-        'days_count' => 'int',
         'type' => LeaveType::class,
         'status' => LeaveStatus::class,
         'has_warning' => 'boolean',
+        'days_count' => 'int'
     ];
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logFillable()
+            ->logOnlyDirty()
+            ->dontSubmitEmptyLogs();
+    }
 
     public function user()
     {

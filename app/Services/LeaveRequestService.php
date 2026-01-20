@@ -4,10 +4,15 @@ namespace App\Services;
 
 use App\Enums\LeaveStatus;
 use App\Enums\LeaveType;
+use App\Models\Setting;
 use App\Models\User;
+use App\Notifications\LeaveRequestApprovedNotification;
+use App\Notifications\LeaveRequestRejectedNotification;
+use App\Notifications\NewLeaveRequestNotification;
 use App\Repositories\Contracts\LeaveBalanceRepositoryInterface;
 use App\Repositories\Contracts\LeaveRequestRepositoryInterface;
 use Carbon\Carbon;
+use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -16,16 +21,22 @@ class LeaveRequestService
     public function __construct(
         protected LeaveRequestRepositoryInterface $leaveRequestRepository,
         protected LeaveBalanceRepositoryInterface $leaveBalanceRepository,
-        protected HolidayService $holidayService
+        protected HolidayService $holidayService,
+        protected PayrollService $payrollService
     ) {}
 
     public function createRequest(User $user, array $data)
     {
         $startDate = Carbon::parse($data['start_date']);
         $endDate = Carbon::parse($data['end_date']);
+        
+        $this->validateMonthlyClosure($startDate);
+        if ($startDate->month !== $endDate->month) {
+            $this->validateMonthlyClosure($endDate);
+        }
+
         $type = LeaveType::from($data['type']);
         
-        // 1. Átfedés vizsgálat (Saját magával) - Ez HIBA, nem warning
         $overlapping = $this->leaveRequestRepository->findOverlapping(
             $user->id, 
             $startDate->format('Y-m-d'), 
@@ -38,7 +49,6 @@ class LeaveRequestService
             ]);
         }
 
-        // 2. Munkanapok számítása és validálása - Ez is HIBA
         $daysCount = $this->calculateWorkingDays($startDate, $endDate);
         
         if ($daysCount === 0) {
@@ -47,15 +57,12 @@ class LeaveRequestService
             ]);
         }
 
-        // 3. Szabadság keret vizsgálat (csak ha Vacation) - Ez is HIBA
         if ($type === LeaveType::VACATION) {
             $this->validateLeaveBalance($user, $daysCount, $startDate->year);
         }
 
-        // --- WARNINGS ---
         $warnings = [];
 
-        // 4. HO szabály vizsgálat
         if ($type === LeaveType::HOME_OFFICE) {
             $hoWarning = $this->checkHomeOfficeLimit($user, $startDate, $endDate);
             if ($hoWarning) {
@@ -63,13 +70,11 @@ class LeaveRequestService
             }
         }
 
-        // 5. Részleg átfedés vizsgálat
         $deptWarning = $this->checkDepartmentOverlap($user, $startDate, $endDate, $type);
         if ($deptWarning) {
             $warnings[] = $deptWarning;
         }
 
-        // Mentés
         $data['user_id'] = $user->id;
         $data['status'] = LeaveStatus::PENDING->value;
         $data['days_count'] = $daysCount;
@@ -79,7 +84,14 @@ class LeaveRequestService
             $data['warning_message'] = implode(' | ', $warnings);
         }
 
-        return $this->leaveRequestRepository->create($data);
+        $request = $this->leaveRequestRepository->create($data);
+
+        // Értesítés a Managernek
+        if ($user->manager) {
+            $user->manager->notify(new NewLeaveRequestNotification($request));
+        }
+
+        return $request;
     }
 
     public function updateRequest(User $user, int $id, array $data)
@@ -92,9 +104,18 @@ class LeaveRequestService
 
         $startDate = Carbon::parse($data['start_date']);
         $endDate = Carbon::parse($data['end_date']);
+        
+        $this->validateMonthlyClosure($request->start_date);
+        if ($request->start_date->month !== $request->end_date->month) {
+            $this->validateMonthlyClosure($request->end_date);
+        }
+        $this->validateMonthlyClosure($startDate);
+        if ($startDate->month !== $endDate->month) {
+            $this->validateMonthlyClosure($endDate);
+        }
+
         $type = LeaveType::from($data['type']);
 
-        // 1. Átfedés vizsgálat
         $overlapping = $this->leaveRequestRepository->findOverlapping(
             $user->id,
             $startDate->format('Y-m-d'),
@@ -108,7 +129,6 @@ class LeaveRequestService
             ]);
         }
 
-        // 2. Munkanapok
         $daysCount = $this->calculateWorkingDays($startDate, $endDate);
         
         if ($daysCount === 0) {
@@ -117,12 +137,10 @@ class LeaveRequestService
             ]);
         }
 
-        // 3. Keret
         if ($type === LeaveType::VACATION) {
             $this->validateLeaveBalance($user, $daysCount, $startDate->year, $id);
         }
 
-        // --- WARNINGS ---
         $warnings = [];
 
         if ($type === LeaveType::HOME_OFFICE) {
@@ -137,7 +155,6 @@ class LeaveRequestService
             $warnings[] = $deptWarning;
         }
 
-        // Adatok frissítése
         $data['status'] = LeaveStatus::PENDING->value;
         $data['days_count'] = $daysCount;
         $data['manager_comment'] = null;
@@ -151,7 +168,14 @@ class LeaveRequestService
             $data['warning_message'] = null;
         }
 
-        return $this->leaveRequestRepository->update($id, $data);
+        $updated = $this->leaveRequestRepository->update($id, $data);
+
+        // Értesítés a Managernek (ha változott)
+        if ($updated && $user->manager) {
+            $user->manager->notify(new NewLeaveRequestNotification($request)); // Újraküldjük, vagy külön UpdatedNotification
+        }
+
+        return $updated;
     }
 
     public function approveRequest(int $id, User $approver)
@@ -162,6 +186,8 @@ class LeaveRequestService
             if (!$request) {
                 throw new \Exception(__('Request not found.'));
             }
+            
+            $this->validateMonthlyClosure($request->start_date);
 
             $this->leaveRequestRepository->updateStatus($request, LeaveStatus::APPROVED->value);
 
@@ -174,6 +200,9 @@ class LeaveRequestService
                 );
             }
             
+            // Értesítés a dolgozónak
+            $request->user->notify(new LeaveRequestApprovedNotification($request));
+            
             return true;
         });
     }
@@ -185,29 +214,66 @@ class LeaveRequestService
         if (!$request) {
             throw new \Exception(__('Request not found.'));
         }
+        
+        $this->validateMonthlyClosure($request->start_date);
 
-        return $this->leaveRequestRepository->updateStatus($request, LeaveStatus::REJECTED->value, $comment);
+        $updated = $this->leaveRequestRepository->updateStatus($request, LeaveStatus::REJECTED->value, $comment);
+        
+        // Értesítés a dolgozónak
+        if ($updated) {
+            $request->user->notify(new LeaveRequestRejectedNotification($request));
+        }
+
+        return $updated;
+    }
+    
+    public function deleteRequest(int $id, int $userId)
+    {
+        $request = $this->leaveRequestRepository->find($id);
+        
+        if (!$request || $request->user_id !== $userId) {
+            throw new \Exception(__('Request not found or access denied.'));
+        }
+        
+        $this->validateMonthlyClosure($request->start_date);
+        
+        if ($request->status === LeaveStatus::APPROVED) {
+            // Egyszerűsítve: törölhető.
+        }
+        
+        return $this->leaveRequestRepository->delete($id);
+    }
+
+    protected function validateMonthlyClosure($date)
+    {
+        if ($this->payrollService->isMonthClosed($date->year, $date->month)) {
+            throw ValidationException::withMessages([
+                'date' => __('This month is closed and cannot be modified.')
+            ]);
+        }
     }
 
     protected function checkHomeOfficeLimit(User $user, Carbon $start, Carbon $end): ?string
     {
-        // Szabály: 2 hetente 1 nap (gördülő 14 nap)
-        // Ez egy példa implementáció, a pontos szabályt finomítani lehet.
-        
+        $limitDays = (int) (Setting::where('key', 'ho_limit_days')->value('value') ?? 1);
+        $limitPeriod = (int) (Setting::where('key', 'ho_limit_period')->value('value') ?? 14);
+
         $daysRequested = $start->diffInDays($end) + 1;
-        if ($daysRequested > 1) {
-             return __('Home Office limit exceeded: Only 1 day allowed per request.');
+        if ($daysRequested > $limitDays) {
+             return __('Home Office limit exceeded: Only :limit day(s) allowed per request.', ['limit' => $limitDays]);
         }
 
-        $checkStart = $start->copy()->subDays(13);
+        $checkStart = $start->copy()->subDays($limitPeriod - 1);
         $checkEnd = $start->copy()->subDay();
 
         $pastHO = $this->leaveRequestRepository->getForUserInPeriod($user->id, $checkStart->format('Y-m-d'), $checkEnd->format('Y-m-d'))
             ->where('type', LeaveType::HOME_OFFICE)
             ->whereIn('status', [LeaveStatus::APPROVED, LeaveStatus::PENDING]);
 
-        if ($pastHO->isNotEmpty()) {
-             return __('Home Office limit exceeded: 1 day / 2 weeks.');
+        $pastDaysCount = $pastHO->sum('days_count');
+
+        if (($pastDaysCount + $daysRequested) > $limitDays) {
+             return __('Home Office limit exceeded: :limit day(s) / :period days.', ['limit' => $limitDays, 'period' => $limitPeriod]);
         }
         
         return null;
@@ -219,7 +285,6 @@ class LeaveRequestService
             return null;
         }
 
-        // Lekérjük a részleg többi dolgozóját
         $colleagues = User::where('department_id', $user->department_id)
             ->where('id', '!=', $user->id)
             ->pluck('id');
@@ -228,13 +293,9 @@ class LeaveRequestService
             return null;
         }
 
-        // Lekérjük a kollégák átfedő kérelmeit
-        // Ehhez a repository-t kellene bővíteni egy findOverlappingForUsers metódussal, vagy itt query-zni.
-        // Mivel a repository interface-t nem akarom most módosítani, itt használok egy query-t (ami nem szép, de gyors).
-        
         $overlaps = \App\Models\LeaveRequest::whereIn('user_id', $colleagues)
             ->whereIn('status', [LeaveStatus::APPROVED->value, LeaveStatus::PENDING->value])
-            ->where('type', $type->value) // Csak azonos típusú (pl. szabi vs szabi)
+            ->where('type', $type->value)
             ->where(function ($query) use ($start, $end) {
                 $query->where('start_date', '<=', $end->format('Y-m-d'))
                       ->where('end_date', '>=', $start->format('Y-m-d'));
@@ -304,20 +365,5 @@ class LeaveRequestService
             
             return !$isWeekend;
         }, $end) + 1;
-    }
-    
-    public function deleteRequest(int $id, int $userId)
-    {
-        $request = $this->leaveRequestRepository->find($id);
-        
-        if (!$request || $request->user_id !== $userId) {
-            throw new \Exception(__('Request not found or access denied.'));
-        }
-        
-        if ($request->status === LeaveStatus::APPROVED) {
-            // Egyszerűsítve: törölhető.
-        }
-        
-        return $this->leaveRequestRepository->delete($id);
     }
 }

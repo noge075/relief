@@ -4,11 +4,17 @@ namespace App\Services;
 
 use App\Enums\LeaveStatus;
 use App\Enums\LeaveType;
+use App\Enums\RoleType;
+use App\Models\MonthlyClosure;
+use App\Models\User;
+use App\Notifications\MonthlyClosureNotification;
+use App\Notifications\MonthReopenedNotification;
 use App\Repositories\Contracts\LeaveRequestRepositoryInterface;
 use App\Repositories\Contracts\UserRepositoryInterface;
 use Carbon\Carbon;
 use Carbon\CarbonPeriod;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Notification;
 
 class PayrollService
 {
@@ -189,5 +195,55 @@ class PayrollService
         }
         
         return $days;
+    }
+
+    // --- Monthly Closure ---
+
+    public function isMonthClosed(int $year, int $month): bool
+    {
+        $date = Carbon::createFromDate($year, $month, 1)->startOfMonth()->format('Y-m-d');
+        return MonthlyClosure::where('month', $date)->where('is_closed', true)->exists();
+    }
+
+    public function closeMonth(int $year, int $month, User $user): void
+    {
+        $date = Carbon::createFromDate($year, $month, 1)->startOfMonth()->format('Y-m-d');
+        
+        MonthlyClosure::updateOrCreate(
+            ['month' => $date],
+            [
+                'is_closed' => true,
+                'closed_by' => $user->id,
+                'closed_at' => now(),
+            ]
+        );
+        
+        // Értesítés a Payrollosoknak
+        $payrollUsers = User::role(RoleType::PAYROLL->value)->get();
+        Notification::send($payrollUsers, new MonthlyClosureNotification($year, $month, $user));
+    }
+
+    public function reopenMonth(int $year, int $month, User $user): void
+    {
+        $date = Carbon::createFromDate($year, $month, 1)->startOfMonth()->format('Y-m-d');
+        
+        MonthlyClosure::updateOrCreate(
+            ['month' => $date],
+            [
+                'is_closed' => false,
+                'closed_by' => $user->id,
+                'closed_at' => now(),
+            ]
+        );
+        
+        // Értesítés a Payrollosoknak
+        $payrollUsers = User::role(RoleType::PAYROLL->value)->get();
+        Notification::send($payrollUsers, new MonthReopenedNotification($year, $month, $user));
+    }
+    
+    public function getClosureStatus(int $year, int $month): ?MonthlyClosure
+    {
+        $date = Carbon::createFromDate($year, $month, 1)->startOfMonth()->format('Y-m-d');
+        return MonthlyClosure::where('month', $date)->first();
     }
 }

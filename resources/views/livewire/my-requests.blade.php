@@ -1,0 +1,93 @@
+<div class="flex flex-col gap-6">
+    <div class="flex justify-between items-center">
+        <div>
+            <flux:heading size="xl">{{ __('My Requests') }}</flux:heading>
+            <flux:subheading>{{ __('View the status of your leave requests.') }}</flux:subheading>
+        </div>
+    </div>
+
+    <!-- Toolbar -->
+    <div class="flex flex-col lg:flex-row gap-4 justify-between items-end bg-white dark:bg-zinc-900 p-4 rounded-xl border border-zinc-200 dark:border-zinc-700 shadow-sm">
+        <div class="flex flex-col sm:flex-row gap-4 w-full lg:w-auto items-end">
+            <flux:select wire:model.live="yearFilter" placeholder="{{ __('All Years') }}" class="w-32">
+                <flux:select.option value="">{{ __('All Years') }}</flux:select.option>
+                @foreach(range(Carbon\Carbon::now()->year - 1, Carbon\Carbon::now()->year + 1) as $y)
+                    <flux:select.option value="{{ $y }}">{{ $y }}</flux:select.option>
+                @endforeach
+            </flux:select>
+
+            <flux:select wire:model.live="typeFilter" placeholder="{{ __('All Types') }}" icon="tag" class="w-full sm:w-48">
+                <flux:select.option value="">{{ __('All Types') }}</flux:select.option>
+                <flux:select.option value="vacation">{{ __('Vacation') }}</flux:select.option>
+                <flux:select.option value="sick">{{ __('Sick Leave') }}</flux:select.option>
+                <flux:select.option value="home_office">{{ __('Home Office') }}</flux:select.option>
+            </flux:select>
+
+            <flux:select wire:model.live="statusFilter" placeholder="{{ __('All Statuses') }}" icon="check-circle" class="w-full sm:w-48">
+                <flux:select.option value="">{{ __('All Statuses') }}</flux:select.option>
+                <flux:select.option value="pending">{{ __('Pending') }}</flux:select.option>
+                <flux:select.option value="approved">{{ __('Approved') }}</flux:select.option>
+                <flux:select.option value="rejected">{{ __('Rejected') }}</flux:select.option>
+            </flux:select>
+
+            @if($statusFilter || $typeFilter || $yearFilter)
+                <flux:button wire:click="clearFilters" variant="ghost" icon="x-mark" class="text-red-500 hover:text-red-600">{{ __('Clear') }}</flux:button>
+            @endif
+        </div>
+    </div>
+
+    <flux:card>
+        <flux:table>
+            <flux:table.columns>
+                <flux:table.column>{{ __('Type') }}</flux:table.column>
+                <flux:table.column>{{ __('Date') }}</flux:table.column>
+                <flux:table.column>{{ __('Days') }}</flux:table.column>
+                <flux:table.column>{{ __('Reason') }}</flux:table.column>
+                <flux:table.column>{{ __('Status') }}</flux:table.column>
+                <flux:table.column>{{ __('Manager Comment') }}</flux:table.column>
+            </flux:table.columns>
+
+            <flux:table.rows>
+                @foreach($requests as $request)
+                    <flux:table.row :key="$request->id">
+                        <flux:table.cell>
+                            @php
+                                $type = $request->type->value;
+                                $color = match($type) { 'vacation' => 'yellow', 'sick' => 'red', 'home_office' => 'blue', default => 'zinc' };
+                                $label = match($type) { 'vacation' => __('Vacation'), 'sick' => __('Sick Leave'), 'home_office' => __('Home Office'), default => __('Other') };
+                            @endphp
+                            <flux:badge :color="$color" size="sm">{{ $label }}</flux:badge>
+                        </flux:table.cell>
+                        <flux:table.cell>
+                            {{ $request->start_date->format('Y.m.d') }}
+                            @if($request->start_date != $request->end_date)
+                                - {{ $request->end_date->format('Y.m.d') }}
+                            @endif
+                        </flux:table.cell>
+                        <flux:table.cell>{{ $request->days_count }}</flux:table.cell>
+                        <flux:table.cell class="truncate max-w-[200px]" title="{{ $request->reason }}">{{ $request->reason }}</flux:table.cell>
+                        <flux:table.cell>
+                            @php
+                                $status = $request->status->value;
+                                $statusColor = match($status) { 'approved' => 'green', 'rejected' => 'red', 'pending' => 'yellow', default => 'zinc' };
+                                $statusLabel = match($status) { 'approved' => __('Approved'), 'rejected' => __('Rejected'), 'pending' => __('Pending'), default => ucfirst($status) };
+                            @endphp
+                            <flux:badge :color="$statusColor" size="sm">{{ $statusLabel }}</flux:badge>
+                        </flux:table.cell>
+                        <flux:table.cell class="truncate max-w-[200px]" title="{{ $request->manager_comment }}">
+                            @if($request->manager_comment)
+                                <span class="text-zinc-600 dark:text-zinc-400">{{ $request->manager_comment }}</span>
+                            @else
+                                <span class="text-zinc-400">-</span>
+                            @endif
+                        </flux:table.cell>
+                    </flux:table.row>
+                @endforeach
+            </flux:table.rows>
+        </flux:table>
+
+        <div class="mt-4">
+            {{ $requests->links() }}
+        </div>
+    </flux:card>
+</div>

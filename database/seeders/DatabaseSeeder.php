@@ -17,6 +17,8 @@ class DatabaseSeeder extends Seeder
             DepartmentSeeder::class,
             WorkScheduleSeeder::class,
             UserSeeder::class,
+            SettingSeeder::class,
+            LeaveBalanceSeeder::class,
             AttendanceSeeder::class,
         ]);
     }

@@ -21,6 +21,10 @@
                         {{ __('Attendance') }}
                     </flux:sidebar.item>
 
+                    <flux:sidebar.item icon="list-bullet" :href="route('my-requests.index')" :current="request()->routeIs('my-requests.index')" wire:navigate>
+                        {{ __('My Requests') }}
+                    </flux:sidebar.item>
+
                     @can('view status board')
                         <flux:sidebar.item icon="table-cells" :href="route('status-board')" :current="request()->routeIs('status-board')" wire:navigate>
                             {{ __('Status Board') }}
@@ -72,6 +76,14 @@
                         <flux:sidebar.item icon="calendar-days" :href="route('settings.special-days')" :current="request()->routeIs('settings.special-days')" wire:navigate>
                             {{ __('Special Days') }}
                         </flux:sidebar.item>
+                        <flux:sidebar.item icon="cog-6-tooth" :href="route('settings.index')" :current="request()->routeIs('settings.index')" wire:navigate>
+                            {{ __('System Settings') }}
+                        </flux:sidebar.item>
+                        @can('view audit logs')
+                            <flux:sidebar.item icon="clipboard-document-list" :href="route('settings.audit-logs')" :current="request()->routeIs('settings.audit-logs')" wire:navigate>
+                                {{ __('Audit Logs') }}
+                            </flux:sidebar.item>
+                        @endcan
                     </flux:sidebar.group>
                 @endcan
             </flux:sidebar.nav>
