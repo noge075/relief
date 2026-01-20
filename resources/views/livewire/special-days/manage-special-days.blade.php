@@ -21,7 +21,7 @@
         </div>
     </div>
 
-    <flux:card>
+    <flux:card class="!p-0 overflow-hidden">
         <flux:table>
             <flux:table.columns>
                 <flux:table.column sortable :sorted="$sortCol === 'date'" :direction="$sortAsc ? 'asc' : 'desc'" wire:click="sortBy('date')">{{ __('Date') }}</flux:table.column>
@@ -57,9 +57,9 @@
                                 <flux:dropdown>
                                     <flux:button variant="ghost" size="sm" icon="ellipsis-horizontal" />
                                     <flux:menu>
-                                        <flux:menu.item wire:click="edit({{ $day['id'] }})" icon="pencil-square">{{ __('Edit') }}</flux:menu.item>
+                                        <flux:menu.item icon="pencil-square" wire:click="edit({{ $day['id'] }})">{{ __('Edit') }}</flux:menu.item>
                                         <flux:menu.separator />
-                                        <flux:menu.item wire:click="delete({{ $day['id'] }})" icon="trash" variant="danger">{{ __('Delete') }}</flux:menu.item>
+                                        <flux:menu.item icon="trash" variant="danger" wire:click="delete({{ $day['id'] }})">{{ __('Delete') }}</flux:menu.item>
                                     </flux:menu>
                                 </flux:dropdown>
                             @else
@@ -71,7 +71,10 @@
             </flux:table.rows>
         </flux:table>
 
-        <div class="mt-4">
+        <div class="p-4 border-t border-zinc-200 dark:border-zinc-700 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="text-sm text-zinc-500">
+                {{ __('Showing') }} <span class="font-medium">{{ $specialDays->firstItem() }}</span> {{ __('to') }} <span class="font-medium">{{ $specialDays->lastItem() }}</span> {{ __('of') }} <span class="font-medium">{{ $specialDays->total() }}</span> {{ __('results') }}
+            </div>
             {{ $specialDays->links() }}
         </div>
     </flux:card>
