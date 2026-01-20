@@ -23,16 +23,28 @@
     --color-zinc-900: #171717;
     --color-zinc-950: #0a0a0a;
 
-    --color-accent: var(--color-neutral-800);
-    --color-accent-content: var(--color-neutral-800);
-    --color-accent-foreground: var(--color-white);
+    --color-indigo-50: #eef2ff;
+    --color-indigo-100: #e0e7ff;
+    --color-indigo-200: #c7d2fe;
+    --color-indigo-300: #a5b4fc;
+    --color-indigo-400: #818cf8;
+    --color-indigo-500: #6366f1;
+    --color-indigo-600: #132347;
+    --color-indigo-700: #4338ca;
+    --color-indigo-800: #3730a3;
+    --color-indigo-900: #312e81;
+    --color-indigo-950: #1e1b4b;
+
+    --color-accent: #132347;
+    --color-accent-content: #ffffff;
+    --color-accent-foreground: #ffffff;
 }
 
 @layer theme {
     .dark {
-        --color-accent: var(--color-white);
-        --color-accent-content: var(--color-white);
-        --color-accent-foreground: var(--color-neutral-800);
+        --color-accent: #132347;
+        --color-accent-content: #ffffff;
+        --color-accent-foreground: #ffffff;
     }
 }
 
@@ -59,6 +71,29 @@ input:focus[data-flux-control],
 textarea:focus[data-flux-control],
 select:focus[data-flux-control] {
     @apply outline-hidden ring-2 ring-accent ring-offset-2 ring-offset-accent-foreground;
+}
+
+[data-flux-sidebar-item][data-current] {
+    background-color: var(--color-accent) !important;
+    color: var(--color-accent-content) !important;
+}
+
+[data-flux-navlist-item][data-current] {
+    background-color: var(--color-accent) !important;
+    color: var(--color-accent-content) !important;
+}
+
+[data-flux-table] thead th {
+    background-color: var(--color-accent) !important;
+    color: var(--color-accent-content) !important;
+    padding-top: 1rem !important;
+    padding-bottom: 1rem !important;
+}
+
+[data-flux-table] th,
+[data-flux-table] td {
+    padding-left: 1.5rem !important;
+    padding-right: 1.5rem !important;
 }
 
 /* \[:where(&)\]:size-4 {

@@ -17,6 +17,8 @@
                     <flux:select.option value="{{ $m }}">{{ \Carbon\Carbon::create(null, $m)->translatedFormat('F') }}</flux:select.option>
                 @endforeach
             </flux:select>
+
+            <flux:button variant="primary" icon="arrow-down-tray" href="{{ route('attendance.download-pdf', ['year' => $year, 'month' => $month]) }}" target="_blank">{{ __('Download PDF') }}</flux:button>
         </div>
     </div>
 
@@ -43,7 +45,7 @@
         </flux:card>
     @endif
 
-    <flux:card>
+    <flux:card class="!p-0 overflow-hidden">
         <flux:table>
             <flux:table.columns>
                 <flux:table.column>{{ __('Date') }}</flux:table.column>
@@ -89,7 +91,7 @@
                                         'home_office' => 'blue',
                                         'holiday' => 'zinc',
                                         'weekend' => 'zinc',
-                                        'scheduled' => 'zinc', // Tervezett, de még nincs log
+                                        'scheduled' => 'zinc',
                                         default => 'zinc'
                                     };
                                 @endphp

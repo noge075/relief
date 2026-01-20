@@ -36,7 +36,7 @@
         </div>
     </div>
 
-    <flux:card>
+    <flux:card class="!p-0 overflow-hidden">
         <flux:table>
             <flux:table.columns>
                 <flux:table.column>{{ __('Type') }}</flux:table.column>
@@ -86,7 +86,7 @@
             </flux:table.rows>
         </flux:table>
 
-        <div class="mt-4">
+        <div class="p-4 border-t border-zinc-200 dark:border-zinc-700">
             {{ $requests->links() }}
         </div>
     </flux:card>

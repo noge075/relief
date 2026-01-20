@@ -13,9 +13,9 @@
 
             <flux:select wire:model.live="eventFilter" placeholder="{{ __('All Events') }}" class="w-full sm:w-40">
                 <flux:select.option value="">{{ __('All Events') }}</flux:select.option>
-                <flux:select.option value="created">{{ __('Created') }}</flux:select.option>
-                <flux:select.option value="updated">{{ __('Updated') }}</flux:select.option>
-                <flux:select.option value="deleted">{{ __('Deleted') }}</flux:select.option>
+                <flux:select.option value="created">Created</flux:select.option>
+                <flux:select.option value="updated">Updated</flux:select.option>
+                <flux:select.option value="deleted">Deleted</flux:select.option>
             </flux:select>
 
             <flux:input wire:model.live.debounce.300ms="causerFilter" icon="user" placeholder="{{ __('Filter by User...') }}" class="w-full sm:w-48" />
@@ -26,7 +26,7 @@
         </div>
     </div>
 
-    <flux:card>
+    <flux:card class="!p-0 overflow-hidden">
         <flux:table>
             <flux:table.columns>
                 <flux:table.column>{{ __('Date') }}</flux:table.column>
@@ -80,7 +80,10 @@
             </flux:table.rows>
         </flux:table>
 
-        <div class="mt-4">
+        <div class="p-4 border-t border-zinc-200 dark:border-zinc-700 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="text-sm text-zinc-500">
+                {{ __('Showing') }} <span class="font-medium">{{ $activities->firstItem() }}</span> {{ __('to') }} <span class="font-medium">{{ $activities->lastItem() }}</span> {{ __('of') }} <span class="font-medium">{{ $activities->total() }}</span> {{ __('results') }}
+            </div>
             {{ $activities->links() }}
         </div>
     </flux:card>

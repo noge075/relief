@@ -31,7 +31,7 @@
         </div>
     </div>
 
-    <flux:card>
+    <flux:card class="!p-0 overflow-hidden">
         <flux:table>
             <flux:table.columns>
                 <flux:table.column sortable :sorted="$sortCol === 'name'" :direction="$sortAsc ? 'asc' : 'desc'" wire:click="sortBy('name')">{{ __('Name') }}</flux:table.column>
@@ -77,7 +77,10 @@
             </flux:table.rows>
         </flux:table>
 
-        <div class="mt-4">
+        <div class="p-4 border-t border-zinc-200 dark:border-zinc-700 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="text-sm text-zinc-500">
+                {{ __('Showing') }} <span class="font-medium">{{ $balances->firstItem() }}</span> {{ __('to') }} <span class="font-medium">{{ $balances->lastItem() }}</span> {{ __('of') }} <span class="font-medium">{{ $balances->total() }}</span> {{ __('results') }}
+            </div>
             {{ $balances->links() }}
         </div>
     </flux:card>

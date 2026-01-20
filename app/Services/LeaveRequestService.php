@@ -14,6 +14,7 @@ use App\Repositories\Contracts\LeaveRequestRepositoryInterface;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 
 class LeaveRequestService
@@ -30,6 +31,7 @@ class LeaveRequestService
         $startDate = Carbon::parse($data['start_date']);
         $endDate = Carbon::parse($data['end_date']);
         
+        // Havi zárás ellenőrzése
         $this->validateMonthlyClosure($startDate);
         if ($startDate->month !== $endDate->month) {
             $this->validateMonthlyClosure($endDate);
@@ -37,6 +39,7 @@ class LeaveRequestService
 
         $type = LeaveType::from($data['type']);
         
+        // 1. Átfedés vizsgálat
         $overlapping = $this->leaveRequestRepository->findOverlapping(
             $user->id, 
             $startDate->format('Y-m-d'), 
@@ -49,6 +52,7 @@ class LeaveRequestService
             ]);
         }
 
+        // 2. Munkanapok
         $daysCount = $this->calculateWorkingDays($startDate, $endDate);
         
         if ($daysCount === 0) {
@@ -57,10 +61,12 @@ class LeaveRequestService
             ]);
         }
 
+        // 3. Keret
         if ($type === LeaveType::VACATION) {
             $this->validateLeaveBalance($user, $daysCount, $startDate->year);
         }
 
+        // --- WARNINGS ---
         $warnings = [];
 
         if ($type === LeaveType::HOME_OFFICE) {
@@ -75,6 +81,7 @@ class LeaveRequestService
             $warnings[] = $deptWarning;
         }
 
+        // Mentés
         $data['user_id'] = $user->id;
         $data['status'] = LeaveStatus::PENDING->value;
         $data['days_count'] = $daysCount;
@@ -88,7 +95,10 @@ class LeaveRequestService
 
         // Értesítés a Managernek
         if ($user->manager) {
+            Log::info('Sending NewLeaveRequestNotification to manager: ' . $user->manager->email);
             $user->manager->notify(new NewLeaveRequestNotification($request));
+        } else {
+            Log::warning('User ' . $user->email . ' has no manager assigned. No notification sent.');
         }
 
         return $request;
@@ -105,6 +115,7 @@ class LeaveRequestService
         $startDate = Carbon::parse($data['start_date']);
         $endDate = Carbon::parse($data['end_date']);
         
+        // Havi zárás ellenőrzése
         $this->validateMonthlyClosure($request->start_date);
         if ($request->start_date->month !== $request->end_date->month) {
             $this->validateMonthlyClosure($request->end_date);
@@ -116,6 +127,7 @@ class LeaveRequestService
 
         $type = LeaveType::from($data['type']);
 
+        // 1. Átfedés
         $overlapping = $this->leaveRequestRepository->findOverlapping(
             $user->id,
             $startDate->format('Y-m-d'),
@@ -129,6 +141,7 @@ class LeaveRequestService
             ]);
         }
 
+        // 2. Munkanapok
         $daysCount = $this->calculateWorkingDays($startDate, $endDate);
         
         if ($daysCount === 0) {
@@ -137,10 +150,12 @@ class LeaveRequestService
             ]);
         }
 
+        // 3. Keret
         if ($type === LeaveType::VACATION) {
             $this->validateLeaveBalance($user, $daysCount, $startDate->year, $id);
         }
 
+        // --- WARNINGS ---
         $warnings = [];
 
         if ($type === LeaveType::HOME_OFFICE) {
@@ -155,6 +170,7 @@ class LeaveRequestService
             $warnings[] = $deptWarning;
         }
 
+        // Adatok frissítése
         $data['status'] = LeaveStatus::PENDING->value;
         $data['days_count'] = $daysCount;
         $data['manager_comment'] = null;
@@ -168,14 +184,18 @@ class LeaveRequestService
             $data['warning_message'] = null;
         }
 
-        $updated = $this->leaveRequestRepository->update($id, $data);
+        $this->leaveRequestRepository->update($id, $data);
+        
+        // Frissítjük a request objektumot a visszaadáshoz
+        $request->fill($data);
 
-        // Értesítés a Managernek (ha változott)
-        if ($updated && $user->manager) {
-            $user->manager->notify(new NewLeaveRequestNotification($request)); // Újraküldjük, vagy külön UpdatedNotification
+        // Értesítés a Managernek
+        if ($user->manager) {
+            Log::info('Sending NewLeaveRequestNotification (update) to manager: ' . $user->manager->email);
+            $user->manager->notify(new NewLeaveRequestNotification($request));
         }
 
-        return $updated;
+        return $request;
     }
 
     public function approveRequest(int $id, User $approver)
@@ -201,6 +221,7 @@ class LeaveRequestService
             }
             
             // Értesítés a dolgozónak
+            Log::info('Sending LeaveRequestApprovedNotification to user: ' . $request->user->email);
             $request->user->notify(new LeaveRequestApprovedNotification($request));
             
             return true;
@@ -221,6 +242,7 @@ class LeaveRequestService
         
         // Értesítés a dolgozónak
         if ($updated) {
+            Log::info('Sending LeaveRequestRejectedNotification to user: ' . $request->user->email);
             $request->user->notify(new LeaveRequestRejectedNotification($request));
         }
 

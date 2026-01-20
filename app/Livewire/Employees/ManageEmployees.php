@@ -55,7 +55,6 @@ class ManageEmployees extends Component
     public function mount(RoleService $roleService)
     {
         $this->authorize(PermissionType::VIEW_USERS->value);
-        // $this->role = RoleType::EMPLOYEE->value;
         $this->sortCol = 'name';
         $this->allPermissions = $roleService->getGroupedPermissions();
         $this->updateRolePermissions();
@@ -118,6 +117,14 @@ class ManageEmployees extends Component
     {
         $this->authorize(PermissionType::CREATE_USERS->value);
         $this->resetForm();
+        
+        // Alapértelmezett értékek beállítása
+        $this->department_id = Department::first()?->id;
+        $this->work_schedule_id = WorkSchedule::first()?->id;
+        $this->employment_type = EmploymentType::STANDARD->value;
+        $this->role = RoleType::EMPLOYEE->value;
+        $this->updateRolePermissions();
+
         $this->isEditing = false;
         $this->showModal = true;
     }

@@ -6,6 +6,40 @@
         @endcan
     </div>
 
+    <!-- Legend -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 p-4 bg-zinc-50 dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-700 text-sm">
+        <div>
+            <flux:heading size="sm" class="mb-2 text-zinc-500 uppercase tracking-wider font-bold">{{ __('Employment Types') }}</flux:heading>
+            <div class="flex flex-wrap gap-2">
+                <flux:badge size="sm" color="blue">{{ __('Standard') }}</flux:badge>
+                <flux:badge size="sm" color="yellow">{{ __('Hourly') }}</flux:badge>
+                <flux:badge size="sm" color="purple">{{ __('Fixed') }}</flux:badge>
+                <flux:badge size="sm" color="orange">{{ __('Student') }}</flux:badge>
+            </div>
+        </div>
+        <div>
+            <flux:heading size="sm" class="mb-2 text-zinc-500 uppercase tracking-wider font-bold">{{ __('Roles') }}</flux:heading>
+            <div class="flex flex-wrap gap-2">
+                <flux:badge size="sm" color="red">{{ __('Super Admin') }}</flux:badge>
+                <flux:badge size="sm" color="pink">{{ __('HR') }}</flux:badge>
+                <flux:badge size="sm" color="blue">{{ __('Manager') }}</flux:badge>
+                <flux:badge size="sm" color="cyan">{{ __('Payroll') }}</flux:badge>
+                <flux:badge size="sm" color="zinc">{{ __('Employee') }}</flux:badge>
+            </div>
+        </div>
+        <div>
+            <flux:heading size="sm" class="mb-2 text-zinc-500 uppercase tracking-wider font-bold">{{ __('Departments') }}</flux:heading>
+            <div class="flex flex-wrap gap-2">
+                @foreach($departments as $dept)
+                    @php
+                        $deptColor = $deptColors[$dept->id % count($deptColors)];
+                    @endphp
+                    <flux:badge size="sm" :color="$deptColor">{{ $dept->name }}</flux:badge>
+                @endforeach
+            </div>
+        </div>
+    </div>
+
     <!-- Toolbar -->
     <div class="flex flex-col lg:flex-row gap-4 justify-between items-end bg-white dark:bg-zinc-900 p-4 rounded-xl border border-zinc-200 dark:border-zinc-700 shadow-sm">
         <div class="flex flex-col sm:flex-row gap-4 w-full lg:w-auto items-end flex-wrap">
@@ -53,41 +87,7 @@
         </div>
     </div>
 
-    <!-- Legend -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 p-4 bg-zinc-50 dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-700 text-sm">
-        <div>
-            <flux:heading size="sm" class="mb-2 text-zinc-500 uppercase tracking-wider font-bold">{{ __('Employment Types') }}</flux:heading>
-            <div class="flex flex-wrap gap-2">
-                <flux:badge size="sm" color="blue">{{ __('Standard') }}</flux:badge>
-                <flux:badge size="sm" color="yellow">{{ __('Hourly') }}</flux:badge>
-                <flux:badge size="sm" color="purple">{{ __('Fixed') }}</flux:badge>
-                <flux:badge size="sm" color="orange">{{ __('Student') }}</flux:badge>
-            </div>
-        </div>
-        <div>
-            <flux:heading size="sm" class="mb-2 text-zinc-500 uppercase tracking-wider font-bold">{{ __('Roles') }}</flux:heading>
-            <div class="flex flex-wrap gap-2">
-                <flux:badge size="sm" color="red">{{ __('Super Admin') }}</flux:badge>
-                <flux:badge size="sm" color="pink">{{ __('HR') }}</flux:badge>
-                <flux:badge size="sm" color="blue">{{ __('Manager') }}</flux:badge>
-                <flux:badge size="sm" color="cyan">{{ __('Payroll') }}</flux:badge>
-                <flux:badge size="sm" color="zinc">{{ __('Employee') }}</flux:badge>
-            </div>
-        </div>
-        <div>
-            <flux:heading size="sm" class="mb-2 text-zinc-500 uppercase tracking-wider font-bold">{{ __('Departments') }}</flux:heading>
-            <div class="flex flex-wrap gap-2">
-                @foreach($departments as $dept)
-                    @php
-                        $deptColor = $deptColors[$dept->id % count($deptColors)];
-                    @endphp
-                    <flux:badge size="sm" :color="$deptColor">{{ $dept->name }}</flux:badge>
-                @endforeach
-            </div>
-        </div>
-    </div>
-
-    <flux:card>
+    <flux:card class="!p-0 overflow-hidden">
         <flux:table>
             <flux:table.columns>
                 <flux:table.column sortable :sorted="$sortCol === 'name'" :direction="$sortAsc ? 'asc' : 'desc'" wire:click="sortBy('name')">{{ __('Name') }}</flux:table.column>
@@ -165,37 +165,35 @@
                             @endif
                         </flux:table.cell>
                         <flux:table.cell>
-                            <flux:dropdown>
-                                <flux:button variant="ghost" size="sm" icon="ellipsis-horizontal"/>
+                            @canany([\App\Enums\PermissionType::EDIT_USERS->value, \App\Enums\PermissionType::DELETE_USERS->value])
+                                <flux:dropdown>
+                                    <flux:button variant="ghost" size="sm" icon="ellipsis-horizontal"/>
 
-                                <flux:menu>
-                                    @if(auth()->user()->id !== $user->id && (auth()->user()->can('view all users') || (auth()->user()->can('view users') && $user->manager_id === auth()->id())))
-                                        <flux:menu.item icon="user-plus" href="{{ route('impersonate', $user->id) }}">
-                                            {{ __('Impersonate') }}
-                                        </flux:menu.item>
-                                        <flux:menu.separator />
-                                    @endif
+                                    <flux:menu>
+                                        @can(\App\Enums\PermissionType::EDIT_USERS->value)
+                                            <flux:menu.item icon="pencil-square" wire:click="openEdit({{ $user->id }})">
+                                                {{ __('Edit') }}
+                                            </flux:menu.item>
+                                        @endcan
 
-                                    @can(\App\Enums\PermissionType::EDIT_USERS->value)
-                                        <flux:menu.item icon="pencil-square" wire:click="openEdit({{ $user->id }})">
-                                            {{ __('Edit') }}
-                                        </flux:menu.item>
-                                    @endcan
-
-                                    @can(\App\Enums\PermissionType::DELETE_USERS->value)
-                                        <flux:menu.item icon="trash" variant="danger" wire:click="delete({{ $user->id }})"
-                                                        wire:confirm="{{ __('Are you sure you want to delete this user?') }}">{{ __('Delete') }}
-                                        </flux:menu.item>
-                                    @endcan
-                                </flux:menu>
-                            </flux:dropdown>
+                                        @can(\App\Enums\PermissionType::DELETE_USERS->value)
+                                            <flux:menu.item icon="trash" variant="danger" wire:click="delete({{ $user->id }})"
+                                                            wire:confirm="{{ __('Are you sure you want to delete this user?') }}">{{ __('Delete') }}
+                                            </flux:menu.item>
+                                        @endcan
+                                    </flux:menu>
+                                </flux:dropdown>
+                            @endcanany
                         </flux:table.cell>
                     </flux:table.row>
                 @endforeach
             </flux:table.rows>
         </flux:table>
 
-        <div class="mt-4">
+        <div class="p-4 border-t border-zinc-200 dark:border-zinc-700 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="text-sm text-zinc-500">
+                {{ __('Showing') }} <span class="font-medium">{{ $users->firstItem() }}</span> {{ __('to') }} <span class="font-medium">{{ $users->lastItem() }}</span> {{ __('of') }} <span class="font-medium">{{ $users->total() }}</span> {{ __('results') }}
+            </div>
             {{ $users->links() }}
         </div>
     </flux:card>
