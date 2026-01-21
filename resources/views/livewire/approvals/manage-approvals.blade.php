@@ -86,10 +86,34 @@
         </flux:table>
 
         <div class="p-4 border-t border-zinc-200 dark:border-zinc-700 flex flex-col md:flex-row justify-between items-center gap-4">
-            <div class="text-sm text-zinc-500">
-                {{ __('Showing') }} <span class="font-medium">{{ $requests->firstItem() }}</span> {{ __('to') }} <span class="font-medium">{{ $requests->lastItem() }}</span> {{ __('of') }} <span class="font-medium">{{ $requests->total() }}</span> {{ __('results') }}
+            <div class="text-sm text-zinc-500 w-full md:w-1/3">
+                @if($requests->total() > 0)
+                    {{ __('Showing') }} <span class="font-medium">{{ $requests->firstItem() }}-{{ $requests->lastItem() }}</span> {{ __('of') }} <span class="font-medium">{{ $requests->total() }}</span> {{ __('results') }}
+                @else
+                    {{ __('No results found.') }}
+                @endif
             </div>
-            {{ $requests->links() }}
+
+            <div class="w-full md:w-1/3 flex justify-center">
+                <div class="flex items-center border border-zinc-200 dark:border-zinc-700 rounded-lg overflow-hidden">
+                    <div class="bg-zinc-50 dark:bg-zinc-800 px-3 py-2 text-sm text-zinc-500 border-r border-zinc-200 dark:border-zinc-700 whitespace-nowrap">
+                        {{ __('Per Page') }}
+                    </div>
+                    <div class="w-20">
+                        <flux:select wire:model.live="perPage" class="!border-0 !shadow-none !rounded-none focus:!ring-0">
+                            <flux:select.option value="5">5</flux:select.option>
+                            <flux:select.option value="10">10</flux:select.option>
+                            <flux:select.option value="15">15</flux:select.option>
+                            <flux:select.option value="25">25</flux:select.option>
+                            <flux:select.option value="50">50</flux:select.option>
+                        </flux:select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="w-full md:w-1/3 flex justify-end">
+                {{ $requests->links('pagination.buttons') }}
+            </div>
         </div>
     </flux:card>
 

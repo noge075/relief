@@ -4,10 +4,12 @@ namespace App\Services;
 
 use App\Enums\LeaveStatus;
 use App\Enums\LeaveType;
+use App\Enums\RoleType;
 use App\Models\Setting;
 use App\Models\User;
 use App\Notifications\LeaveRequestApprovedNotification;
 use App\Notifications\LeaveRequestRejectedNotification;
+use App\Notifications\LeaveRequestDeletedNotification;
 use App\Notifications\NewLeaveRequestNotification;
 use App\Repositories\Contracts\LeaveBalanceRepositoryInterface;
 use App\Repositories\Contracts\LeaveRequestRepositoryInterface;
@@ -16,6 +18,7 @@ use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Facades\Notification;
 
 class LeaveRequestService
 {
@@ -93,12 +96,17 @@ class LeaveRequestService
 
         $request = $this->leaveRequestRepository->create($data);
 
-        // Értesítés a Managernek
+        // Értesítés a Managernek vagy HR/Adminnak
         if ($user->manager) {
             Log::info('Sending NewLeaveRequestNotification to manager: ' . $user->manager->email);
             $user->manager->notify(new NewLeaveRequestNotification($request));
         } else {
-            Log::warning('User ' . $user->email . ' has no manager assigned. No notification sent.');
+            // Ha nincs manager, értesítsük a HR-t és a Super Admint
+            Log::warning('User ' . $user->email . ' has no manager assigned. Notifying HR/Super Admins.');
+            $recipients = User::role([RoleType::HR->value, RoleType::SUPER_ADMIN->value])
+                                ->where('id', '!=', $user->id) // Ne értesítse saját magát, ha ő is HR/Admin
+                                ->get();
+            Notification::send($recipients, new NewLeaveRequestNotification($request));
         }
 
         return $request;
@@ -193,6 +201,13 @@ class LeaveRequestService
         if ($user->manager) {
             Log::info('Sending NewLeaveRequestNotification (update) to manager: ' . $user->manager->email);
             $user->manager->notify(new NewLeaveRequestNotification($request));
+        } else {
+            // Ha nincs manager, értesítsük a HR-t és a Super Admint
+            Log::warning('User ' . $user->email . ' has no manager assigned. Notifying HR/Super Admins about update.');
+            $recipients = User::role([RoleType::HR->value, RoleType::SUPER_ADMIN->value])
+                                ->where('id', '!=', $user->id)
+                                ->get();
+            Notification::send($recipients, new NewLeaveRequestNotification($request));
         }
 
         return $request;
@@ -263,7 +278,21 @@ class LeaveRequestService
             // Egyszerűsítve: törölhető.
         }
         
-        return $this->leaveRequestRepository->delete($id);
+        $this->leaveRequestRepository->delete($id);
+
+        // Értesítés a Managernek vagy HR/Adminnak
+        if ($request->user->manager) {
+            Log::info('Sending LeaveRequestDeletedNotification to manager: ' . $request->user->manager->email);
+            $request->user->manager->notify(new LeaveRequestDeletedNotification($request));
+        } else {
+            Log::warning('User ' . $request->user->email . ' has no manager assigned. Notifying HR/Super Admins about deletion.');
+            $recipients = User::role([RoleType::HR->value, RoleType::SUPER_ADMIN->value])
+                                ->where('id', '!=', $request->user->id)
+                                ->get();
+            Notification::send($recipients, new LeaveRequestDeletedNotification($request));
+        }
+        
+        return true;
     }
 
     protected function validateMonthlyClosure($date)

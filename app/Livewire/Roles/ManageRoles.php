@@ -8,30 +8,33 @@ use App\Services\RoleService;
 use Flux\Flux;
 use Livewire\Component;
 use Livewire\WithPagination;
+use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 
 class ManageRoles extends Component
 {
-    use AuthorizesRequests;
     use WithPagination;
     use WithSorting;
+    use AuthorizesRequests;
 
     public $search = '';
-    public $permissions;
-    
-    // Form properties
-    public $roleId;
-    public $name = '';
-    public $selectedPermissions = [];
+    public $perPage = 10; // Új
     
     public $showModal = false;
     public $isEditing = false;
+    public $editingId = null;
 
-    protected $roleService;
+    // Form
+    public $name = '';
+    public $selectedPermissions = [];
+    public $permissions = []; // Grouped permissions for the form
+
+    protected RoleService $roleService;
 
     protected $rules = [
         'name' => 'required|string|min:3|unique:roles,name',
-        'selectedPermissions' => 'array'
+        'selectedPermissions' => 'array',
     ];
 
     public function boot(RoleService $roleService)
@@ -42,19 +45,17 @@ class ManageRoles extends Component
     public function mount()
     {
         $this->authorize(PermissionType::MANAGE_SETTINGS->value);
-        $this->permissions = $this->roleService->getGroupedPermissions();
         $this->sortCol = 'name';
+        $this->permissions = $this->roleService->getGroupedPermissions();
     }
 
-    public function updatedSearch()
-    {
-        $this->resetPage();
-    }
+    public function updatedSearch() { $this->resetPage(); }
+    public function updatedPerPage() { $this->resetPage(); } // Új
 
     public function create()
     {
         $this->authorize(PermissionType::MANAGE_SETTINGS->value);
-        $this->reset(['roleId', 'name', 'selectedPermissions']);
+        $this->reset(['editingId', 'name', 'selectedPermissions']);
         $this->isEditing = false;
         $this->showModal = true;
     }
@@ -62,35 +63,35 @@ class ManageRoles extends Component
     public function edit($id)
     {
         $this->authorize(PermissionType::MANAGE_SETTINGS->value);
-        $role = $this->roleService->getRole($id);
-        $this->roleId = $id;
+        $this->reset(['name', 'selectedPermissions']);
+        $this->isEditing = true;
+        $this->editingId = $id;
+
+        $role = Role::findById($id);
         $this->name = $role->name;
         $this->selectedPermissions = $role->permissions->pluck('name')->toArray();
-        
-        $this->isEditing = true;
+
         $this->showModal = true;
     }
 
     public function save()
     {
         $this->authorize(PermissionType::MANAGE_SETTINGS->value);
-        $rules = $this->rules;
-        if ($this->isEditing) {
-            $rules['name'] = 'required|string|min:3|unique:roles,name,' . $this->roleId;
-        }
         
-        $this->validate($rules);
+        if ($this->isEditing) {
+            $this->rules['name'] = 'required|string|min:3|unique:roles,name,' . $this->editingId;
+        }
 
-        $data = [
-            'name' => $this->name,
-            'permissions' => $this->selectedPermissions
-        ];
+        $this->validate();
 
         if ($this->isEditing) {
-            $this->roleService->updateRole($this->roleId, $data);
+            $role = Role::findById($this->editingId);
+            $role->update(['name' => $this->name]);
+            $role->syncPermissions($this->selectedPermissions);
             Flux::toast(__('Role updated successfully.'), variant: 'success');
         } else {
-            $this->roleService->createRole($data);
+            $role = Role::create(['name' => $this->name]);
+            $role->syncPermissions($this->selectedPermissions);
             Flux::toast(__('Role created successfully.'), variant: 'success');
         }
 
@@ -100,14 +101,24 @@ class ManageRoles extends Component
     public function delete($id)
     {
         $this->authorize(PermissionType::MANAGE_SETTINGS->value);
-        $this->roleService->deleteRole($id);
-        Flux::toast(__('Role deleted.'), variant: 'success');
+        $role = Role::findById($id);
+        $role->delete();
+        Flux::toast(__('Role deleted.'), variant: 'danger');
     }
 
     public function render()
     {
+        $query = Role::query();
+
+        if ($this->search) {
+            $query->where('name', 'like', '%' . $this->search . '%');
+        }
+
+        $query->withCount('permissions');
+        $query->orderBy($this->sortCol, $this->sortAsc ? 'asc' : 'desc');
+
         return view('livewire.roles.manage-roles', [
-            'roles' => $this->roleService->getPaginatedRoles(10, $this->search, $this->sortCol, $this->sortAsc),
-        ])->title(__('Manage Roles'));
+            'roles' => $query->paginate($this->perPage) // Új
+        ])->title(__('Roles & Permissions'));
     }
 }

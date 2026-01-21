@@ -8,6 +8,7 @@ use App\Models\WorkSchedule;
 use Flux\Flux;
 use Livewire\Component;
 use Livewire\WithPagination;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 
 class ManageWorkSchedules extends Component
@@ -17,6 +18,7 @@ class ManageWorkSchedules extends Component
     use WithSorting;
 
     public $search = '';
+    public $perPage = 10;
     
     // Form
     public $showModal = false;
@@ -32,30 +34,27 @@ class ManageWorkSchedules extends Component
         'sunday' => 0,
     ];
 
-    protected $rules = [
-        'name' => 'required|string|min:3|max:255',
-        'weeklyPattern.monday' => 'required|numeric|min:0|max:24',
-        'weeklyPattern.tuesday' => 'required|numeric|min:0|max:24',
-        'weeklyPattern.wednesday' => 'required|numeric|min:0|max:24',
-        'weeklyPattern.thursday' => 'required|numeric|min:0|max:24',
-        'weeklyPattern.friday' => 'required|numeric|min:0|max:24',
-        'weeklyPattern.saturday' => 'required|numeric|min:0|max:24',
-        'weeklyPattern.sunday' => 'required|numeric|min:0|max:24',
+    protected $queryString = [
+        'search' => ['except' => ''],
+        'perPage' => ['except' => 10, 'as' => 'per_page'],
+        'sortCol' => ['except' => 'name'],
+        'sortAsc' => ['except' => true],
     ];
 
     public function mount()
     {
         $this->authorize(PermissionType::MANAGE_WORK_SCHEDULES->value);
         $this->sortCol = 'name';
+        
+        $this->perPage = request()->query('per_page', 10);
     }
 
-    public function updatedSearch()
-    {
-        $this->resetPage();
-    }
+    public function updatedSearch() { $this->resetPage(); }
+    public function updatedPerPage() { $this->resetPage(); }
 
     public function create()
     {
+        $this->authorize(PermissionType::MANAGE_WORK_SCHEDULES->value);
         $this->reset(['editingId', 'name']);
         $this->weeklyPattern = [
             'monday' => 8, 'tuesday' => 8, 'wednesday' => 8, 'thursday' => 8, 'friday' => 8, 'saturday' => 0, 'sunday' => 0
@@ -65,6 +64,7 @@ class ManageWorkSchedules extends Component
 
     public function edit($id)
     {
+        $this->authorize(PermissionType::MANAGE_WORK_SCHEDULES->value);
         $schedule = WorkSchedule::find($id);
         if ($schedule) {
             $this->editingId = $schedule->id;
@@ -76,7 +76,12 @@ class ManageWorkSchedules extends Component
 
     public function save()
     {
-        $this->validate();
+        $this->authorize(PermissionType::MANAGE_WORK_SCHEDULES->value);
+        
+        $this->validate([
+            'name' => 'required|string|max:255',
+            'weeklyPattern.*' => 'required|numeric|min:0|max:24',
+        ]);
 
         $data = [
             'name' => $this->name,
@@ -98,13 +103,12 @@ class ManageWorkSchedules extends Component
     {
         $this->authorize(PermissionType::MANAGE_WORK_SCHEDULES->value);
         
-        // Ellenőrizzük, hogy használja-e valaki
-        $schedule = WorkSchedule::withCount('users')->find($id);
-        if ($schedule->users_count > 0) {
+        $schedule = WorkSchedule::find($id);
+        if ($schedule->users()->exists()) {
             Flux::toast(__('Cannot delete schedule because it is assigned to users.'), variant: 'danger');
             return;
         }
-
+        
         $schedule->delete();
         Flux::toast(__('Work schedule deleted.'), variant: 'success');
     }
@@ -117,7 +121,16 @@ class ManageWorkSchedules extends Component
             $query->where('name', 'like', '%' . $this->search . '%');
         }
 
-        $schedules = $query->orderBy($this->sortCol, $this->sortAsc ? 'asc' : 'desc')->paginate(10);
+        $query->orderBy($this->sortCol, $this->sortAsc ? 'asc' : 'desc');
+        
+        $schedules = $query->paginate((int) $this->perPage);
+        
+        $schedules->appends([
+            'search' => $this->search,
+            'per_page' => $this->perPage,
+            'sortCol' => $this->sortCol,
+            'sortAsc' => $this->sortAsc,
+        ]);
 
         return view('livewire.settings.manage-work-schedules', [
             'schedules' => $schedules

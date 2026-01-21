@@ -4,7 +4,7 @@
         @include('partials.head')
     </head>
     <body class="min-h-screen bg-white dark:bg-zinc-800">
-        <flux:sidebar sticky collapsible="mobile" class="w-72 border-e border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900">
+        <flux:sidebar sticky collapsible="mobile" class="w-72 border-e border-zinc-200 bg-zinc-50 dark:bg-zinc-900">
             <flux:sidebar.header>
                 <x-app-logo :sidebar="true" href="{{ route('dashboard') }}" wire:navigate />
                 <flux:sidebar.collapse class="lg:hidden" />
@@ -86,6 +86,9 @@
                             <flux:sidebar.item icon="clipboard-document-list" :href="route('settings.audit-logs')" :current="request()->routeIs('settings.audit-logs')" wire:navigate>
                                 {{ __('Audit Logs') }}
                             </flux:sidebar.item>
+                        @endcan
+                        @can('viewHorizon')
+                            <flux:sidebar.item icon="server" href="/horizon" target="_blank">{{ __('Horizon') }}</flux:sidebar.item>
                         @endcan
                     </flux:sidebar.group>
                 @endcan

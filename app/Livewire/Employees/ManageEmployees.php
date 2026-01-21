@@ -25,7 +25,9 @@ class ManageEmployees extends Component
 
     public $showModal = false;
     public $isEditing = false;
+    
     public $search = '';
+    public $perPage = 10;
     
     // Filters
     public $departmentFilter = null;
@@ -52,12 +54,26 @@ class ManageEmployees extends Component
     // Colors
     public $deptColors = ['indigo', 'fuchsia', 'teal', 'rose', 'cyan', 'amber', 'violet', 'lime', 'sky', 'pink'];
 
+    protected $queryString = [
+        'search' => ['except' => ''],
+        'perPage' => ['except' => 10, 'as' => 'per_page'],
+        'departmentFilter' => ['except' => null],
+        'roleFilter' => ['except' => null],
+        'statusFilter' => ['except' => null],
+        'employmentTypeFilter' => ['except' => null],
+        'workScheduleFilter' => ['except' => null],
+        'sortCol' => ['except' => 'name'],
+        'sortAsc' => ['except' => true],
+    ];
+
     public function mount(RoleService $roleService)
     {
         $this->authorize(PermissionType::VIEW_USERS->value);
         $this->sortCol = 'name';
         $this->allPermissions = $roleService->getGroupedPermissions();
         $this->updateRolePermissions();
+        
+        $this->perPage = request()->query('per_page', 10);
     }
 
     public function updatedSearch() { $this->resetPage(); }
@@ -66,6 +82,11 @@ class ManageEmployees extends Component
     public function updatedStatusFilter() { $this->resetPage(); }
     public function updatedEmploymentTypeFilter() { $this->resetPage(); }
     public function updatedWorkScheduleFilter() { $this->resetPage(); }
+    
+    public function updatedPerPage() 
+    { 
+        $this->resetPage(); 
+    }
     
     public function updatedRole()
     {
@@ -90,6 +111,7 @@ class ManageEmployees extends Component
         $this->statusFilter = null;
         $this->employmentTypeFilter = null;
         $this->workScheduleFilter = null;
+        $this->perPage = 10;
         $this->resetPage();
     }
 
@@ -104,8 +126,22 @@ class ManageEmployees extends Component
             'work_schedule_id' => $this->workScheduleFilter,
         ];
 
+        $users = $userService->getEmployeesList(auth()->user(), (int) $this->perPage, $filters, $this->sortCol, $this->sortAsc);
+        
+        $users->appends([
+            'search' => $this->search,
+            'per_page' => $this->perPage,
+            'departmentFilter' => $this->departmentFilter,
+            'roleFilter' => $this->roleFilter,
+            'statusFilter' => $this->statusFilter,
+            'employmentTypeFilter' => $this->employmentTypeFilter,
+            'workScheduleFilter' => $this->workScheduleFilter,
+            'sortCol' => $this->sortCol,
+            'sortAsc' => $this->sortAsc,
+        ]);
+
         return view('livewire.employees.manage-employees', [
-            'users' => $userService->getEmployeesList(auth()->user(), 10, $filters, $this->sortCol, $this->sortAsc),
+            'users' => $users,
             'departments' => Department::all(),
             'schedules' => WorkSchedule::all(),
             'roles' => Role::all(),
@@ -118,7 +154,6 @@ class ManageEmployees extends Component
         $this->authorize(PermissionType::CREATE_USERS->value);
         $this->resetForm();
         
-        // Alapértelmezett értékek beállítása
         $this->department_id = Department::first()?->id;
         $this->work_schedule_id = WorkSchedule::first()?->id;
         $this->employment_type = EmploymentType::STANDARD->value;

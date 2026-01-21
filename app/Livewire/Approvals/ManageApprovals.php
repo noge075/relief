@@ -2,54 +2,67 @@
 
 namespace App\Livewire\Approvals;
 
+use App\Enums\LeaveStatus;
+use App\Enums\LeaveType;
 use App\Enums\PermissionType;
 use App\Livewire\Traits\WithSorting;
-use App\Services\LeaveRequestService;
 use App\Repositories\Contracts\LeaveRequestRepositoryInterface;
+use App\Services\LeaveRequestService;
 use Flux\Flux;
-use Livewire\Attributes\Title;
 use Livewire\Component;
 use Livewire\WithPagination;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 
 class ManageApprovals extends Component
 {
-    use AuthorizesRequests;
     use WithPagination;
     use WithSorting;
+    use AuthorizesRequests;
 
     public $search = '';
-    public $typeFilter = null;
-
-    // Reject Modal
+    public $typeFilter = '';
+    public $perPage = 10;
+    
     public $showRejectModal = false;
     public $rejectingId = null;
     public $managerComment = '';
 
-    protected LeaveRequestService $leaveRequestService;
     protected LeaveRequestRepositoryInterface $leaveRequestRepository;
+    protected LeaveRequestService $leaveRequestService;
+
+    protected $queryString = [
+        'search' => ['except' => ''],
+        'typeFilter' => ['except' => ''],
+        'perPage' => ['except' => 10, 'as' => 'per_page'],
+        'sortCol' => ['except' => 'start_date'],
+        'sortAsc' => ['except' => true],
+    ];
 
     public function boot(
-        LeaveRequestService $leaveRequestService,
-        LeaveRequestRepositoryInterface $leaveRequestRepository
+        LeaveRequestRepositoryInterface $leaveRequestRepository,
+        LeaveRequestService $leaveRequestService
     ) {
-        $this->leaveRequestService = $leaveRequestService;
         $this->leaveRequestRepository = $leaveRequestRepository;
+        $this->leaveRequestService = $leaveRequestService;
     }
 
     public function mount()
     {
         $this->authorize(PermissionType::APPROVE_LEAVE_REQUESTS->value);
         $this->sortCol = 'start_date';
+        
+        $this->perPage = request()->query('per_page', 10);
     }
 
     public function updatedSearch() { $this->resetPage(); }
     public function updatedTypeFilter() { $this->resetPage(); }
+    public function updatedPerPage() { $this->resetPage(); }
 
     public function clearFilters()
     {
         $this->search = '';
-        $this->typeFilter = null;
+        $this->typeFilter = '';
+        $this->perPage = 10;
         $this->resetPage();
     }
 
@@ -92,18 +105,26 @@ class ManageApprovals extends Component
 
     public function render()
     {
-        $user = auth()->user();
-        
         $filters = [
             'search' => $this->search,
             'type' => $this->typeFilter,
         ];
+
+        $requests = $this->leaveRequestRepository->getPendingRequests(
+            auth()->user()->can('view all leave requests') ? null : auth()->id(),
+            (int) $this->perPage,
+            $filters,
+            $this->sortCol,
+            $this->sortAsc
+        );
         
-        if ($user->can(PermissionType::VIEW_ALL_LEAVE_REQUESTS->value)) {
-             $requests = $this->leaveRequestRepository->getPendingRequests(null, 10, $filters, $this->sortCol, $this->sortAsc);
-        } else {
-             $requests = $this->leaveRequestRepository->getPendingRequests($user->id, 10, $filters, $this->sortCol, $this->sortAsc);
-        }
+        $requests->appends([
+            'search' => $this->search,
+            'typeFilter' => $this->typeFilter,
+            'per_page' => $this->perPage,
+            'sortCol' => $this->sortCol,
+            'sortAsc' => $this->sortAsc,
+        ]);
 
         return view('livewire.approvals.manage-approvals', [
             'requests' => $requests

@@ -23,6 +23,7 @@ class ManageLeaveBalances extends Component
     public $search = '';
     public $yearFilter;
     public $departmentFilter = null;
+    public $perPage = 10;
     
     public $showModal = false;
     public $editingBalanceId = null;
@@ -40,6 +41,15 @@ class ManageLeaveBalances extends Component
     protected LeaveBalanceRepositoryInterface $leaveBalanceRepository;
     protected UserRepositoryInterface $userRepository;
 
+    protected $queryString = [
+        'search' => ['except' => ''],
+        'yearFilter' => ['except' => null],
+        'departmentFilter' => ['except' => null],
+        'perPage' => ['except' => 10, 'as' => 'per_page'],
+        'sortCol' => ['except' => 'name'],
+        'sortAsc' => ['except' => true],
+    ];
+
     public function boot(
         LeaveBalanceRepositoryInterface $leaveBalanceRepository,
         UserRepositoryInterface $userRepository
@@ -53,17 +63,21 @@ class ManageLeaveBalances extends Component
         $this->authorize(PermissionType::VIEW_ALL_LEAVE_BALANCES->value);
         $this->yearFilter = Carbon::now()->year;
         $this->sortCol = 'name';
+        
+        $this->perPage = request()->query('per_page', 10);
     }
 
     public function updatedSearch() { $this->resetPage(); }
     public function updatedYearFilter() { $this->resetPage(); }
     public function updatedDepartmentFilter() { $this->resetPage(); }
+    public function updatedPerPage() { $this->resetPage(); }
 
     public function clearFilters()
     {
         $this->search = '';
         $this->departmentFilter = null;
         $this->yearFilter = Carbon::now()->year;
+        $this->perPage = 10;
         $this->resetPage();
     }
 
@@ -74,7 +88,6 @@ class ManageLeaveBalances extends Component
         $this->year = $this->yearFilter;
         $this->users = $this->userRepository->getUsersWithoutLeaveBalance($this->year);
         
-        // Alapértelmezett user
         if ($this->users->isNotEmpty()) {
             $this->userId = $this->users->first()->id;
         }
@@ -122,7 +135,6 @@ class ManageLeaveBalances extends Component
             ]);
             Flux::toast(__('Leave balance updated successfully.'), variant: 'success');
         } else {
-            // Ellenőrzés, hogy létezik-e már
             if ($this->leaveBalanceRepository->getBalance($this->userId, $this->year, $this->type)) {
                 $this->addError('userId', __('This user already has a leave balance for this year.'));
                 return;
@@ -151,11 +163,20 @@ class ManageLeaveBalances extends Component
     {
         $balances = $this->leaveBalanceRepository->getPaginated(
             $this->yearFilter,
-            ['search' => $this->search, 'department_id' => $this->departmentFilter], // Átadjuk a szűrőt
-            10, 
+            ['search' => $this->search, 'department_id' => $this->departmentFilter],
+            (int) $this->perPage,
             $this->sortCol,
             $this->sortAsc
         );
+
+        $balances->appends([
+            'search' => $this->search,
+            'per_page' => $this->perPage,
+            'departmentFilter' => $this->departmentFilter,
+            'yearFilter' => $this->yearFilter,
+            'sortCol' => $this->sortCol,
+            'sortAsc' => $this->sortAsc,
+        ]);
 
         return view('livewire.employees.manage-leave-balances', [
             'balances' => $balances,

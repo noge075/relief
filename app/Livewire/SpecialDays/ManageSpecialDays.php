@@ -20,6 +20,7 @@ class ManageSpecialDays extends Component
 
     public $year;
     public $search = '';
+    public $perPage = 10;
     
     // Form
     public $showModal = false;
@@ -36,6 +37,14 @@ class ManageSpecialDays extends Component
         'description' => 'nullable|string|max:255',
     ];
 
+    protected $queryString = [
+        'year' => ['except' => null],
+        'search' => ['except' => ''],
+        'perPage' => ['except' => 10, 'as' => 'per_page'],
+        'sortCol' => ['except' => 'date'],
+        'sortAsc' => ['except' => true],
+    ];
+
     public function boot(HolidayService $holidayService)
     {
         $this->holidayService = $holidayService;
@@ -46,6 +55,8 @@ class ManageSpecialDays extends Component
         $this->authorize(PermissionType::MANAGE_SETTINGS->value);
         $this->year = Carbon::now()->year;
         $this->sortCol = 'date';
+        
+        $this->perPage = request()->query('per_page', 10);
     }
 
     public function updatedYear()
@@ -54,6 +65,11 @@ class ManageSpecialDays extends Component
     }
 
     public function updatedSearch()
+    {
+        $this->resetPage();
+    }
+    
+    public function updatedPerPage()
     {
         $this->resetPage();
     }
@@ -84,15 +100,11 @@ class ManageSpecialDays extends Component
         $this->authorize(PermissionType::MANAGE_SETTINGS->value);
         $this->validate();
 
-        // Ellenőrizzük, hogy van-e már ilyen dátum (ha új, vagy ha dátumot módosítunk)
         $existing = $this->holidayService->findSpecialDayByDate($this->date);
         if ($existing && $existing->id !== $this->editingId) {
             $this->addError('date', __('This date is already configured as a special day.'));
             return;
         }
-
-        // Rendszer ünnep ütközés ellenőrzése (itt most egyszerűsítve, vagy újra implementálva)
-        // ... (a korábbi logikát ide kellene másolni, vagy a service-be szervezni)
 
         $data = [
             'date' => $this->date,
@@ -121,13 +133,20 @@ class ManageSpecialDays extends Component
     {
         $allDays = $this->holidayService->getRawSpecialDays((int) $this->year, $this->search, $this->sortCol, $this->sortAsc);
         
-        // Manuális pagináció
-        $perPage = 10;
-        $currentPage = LengthAwarePaginator::resolveCurrentPage();
+        $currentPage = $this->getPage();
+        $perPage = (int) $this->perPage;
+        
         $currentItems = array_slice($allDays, ($currentPage - 1) * $perPage, $perPage);
         
         $paginatedDays = new LengthAwarePaginator($currentItems, count($allDays), $perPage, $currentPage, [
             'path' => LengthAwarePaginator::resolveCurrentPath(),
+            'query' => [
+                'year' => $this->year,
+                'search' => $this->search,
+                'per_page' => $this->perPage,
+                'sortCol' => $this->sortCol,
+                'sortAsc' => $this->sortAsc,
+            ],
         ]);
 
         return view('livewire.special-days.manage-special-days', [

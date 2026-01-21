@@ -410,5 +410,7 @@
     "Cannot report to self.": "Nem lehet önmaga felettese.",
     "Manager updated successfully.": "Felettes sikeresen frissítve.",
     "Hierarchy updated.": "Hierarchia frissítve.",
-    "Workday": "Munaknap"
+    "Workday": "Munaknap",
+    "Per Page": "Oldal",
+    "No results found.": "Nincs találat."
 }
