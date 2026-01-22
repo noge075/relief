@@ -16,6 +16,7 @@ return new class extends Migration
             $table->string('name');
             $table->json('weekly_pattern');
             $table->timestamps();
+            $table->softDeletes();
         });
     }
 

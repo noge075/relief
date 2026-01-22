@@ -45,6 +45,7 @@
                 <flux:table.column>{{ __('Reason') }}</flux:table.column>
                 <flux:table.column>{{ __('Status') }}</flux:table.column>
                 <flux:table.column>{{ __('Manager Comment') }}</flux:table.column>
+                <flux:table.column>{{ __('Actions') }}</flux:table.column>
             </flux:table.columns>
 
             <flux:table.rows>
@@ -80,6 +81,9 @@
                             @else
                                 <span class="text-zinc-400">-</span>
                             @endif
+                        </flux:table.cell>
+                        <flux:table.cell>
+                            <flux:button variant="ghost" size="sm" icon="eye" wire:click="openDetails({{ $request->id }})">{{ __('Details') }}</flux:button>
                         </flux:table.cell>
                     </flux:table.row>
                 @endforeach
@@ -117,4 +121,86 @@
             </div>
         </div>
     </flux:card>
+
+    <!-- Details Modal -->
+    <flux:modal wire:model="showDetailsModal" class="min-w-[600px]">
+        <div class="space-y-6">
+            <div>
+                <flux:heading size="lg">{{ __('Request Details') }}</flux:heading>
+                <flux:subheading>
+                    @if($selectedRequest)
+                        {{ ucfirst($selectedRequest->type->value) }} - {{ $selectedRequest->start_date->format('Y.m.d') }}
+                    @endif
+                </flux:subheading>
+            </div>
+
+            @if($selectedRequest)
+                <div class="space-y-4">
+                    <!-- Info -->
+                    <div class="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                            <span class="text-zinc-500 block">{{ __('Status') }}</span>
+                            <span class="font-medium">{{ __(ucfirst($selectedRequest->status->value)) }}</span>
+                        </div>
+                        <div>
+                            <span class="text-zinc-500 block">{{ __('Days') }}</span>
+                            <span class="font-medium">{{ $selectedRequest->days_count }}</span>
+                        </div>
+                        <div class="col-span-2">
+                            <span class="text-zinc-500 block">{{ __('Reason') }}</span>
+                            <span class="font-medium">{{ $selectedRequest->reason ?? '-' }}</span>
+                        </div>
+                        @if($selectedRequest->manager_comment)
+                            <div class="col-span-2">
+                                <span class="text-zinc-500 block">{{ __('Manager Comment') }}</span>
+                                <span class="font-medium text-red-600">{{ $selectedRequest->manager_comment }}</span>
+                            </div>
+                        @endif
+                    </div>
+
+                    <flux:separator />
+
+                    <!-- Documents -->
+                    <div>
+                        <flux:heading size="sm" class="mb-2">{{ __('Documents') }}</flux:heading>
+
+                        @if($selectedRequest->getMedia('documents')->isNotEmpty())
+                            <div class="space-y-2 mb-4">
+                                @foreach($selectedRequest->getMedia('documents') as $media)
+                                    <div class="flex justify-between items-center p-2 bg-zinc-50 dark:bg-zinc-800 rounded border border-zinc-200 dark:border-zinc-700">
+                                        <div class="flex items-center gap-2 overflow-hidden">
+                                            <flux:icon name="paper-clip" class="text-zinc-400 flex-shrink-0" />
+                                            <span class="text-sm truncate">{{ $media->file_name }}</span>
+                                        </div>
+                                        <div class="flex gap-2">
+                                            <flux:button variant="ghost" size="xs" icon="arrow-down-tray" href="{{ $media->getUrl() }}" target="_blank" />
+                                            <flux:button variant="ghost" size="xs" icon="trash" class="text-red-500 hover:text-red-600" wire:click="deleteDocument({{ $media->id }})" wire:confirm="{{ __('Are you sure?') }}" />
+                                        </div>
+                                    </div>
+                                @endforeach
+                            </div>
+                        @else
+                            <p class="text-sm text-zinc-500 mb-4">{{ __('No documents attached.') }}</p>
+                        @endif
+
+                        <!-- Upload (csak ha Sick Leave, vagy mindig?) -->
+                        <!-- A felhasználó kérése: "Ezt utolóag is lehetne... amikor leadja a betegszabit még nem tud feltölteni" -->
+                        <!-- Tehát mindig engedjük, vagy csak ha Sick Leave. -->
+                        @if($selectedRequest->type === \App\Enums\LeaveType::SICK)
+                            <div class="space-y-2">
+                                <flux:input type="file" wire:model="upload" label="{{ __('Upload Document') }}" />
+                                <div class="flex justify-end">
+                                    <flux:button wire:click="saveDocument" variant="primary" size="sm" :disabled="!$upload">{{ __('Upload') }}</flux:button>
+                                </div>
+                            </div>
+                        @endif
+                    </div>
+                </div>
+            @endif
+
+            <div class="flex justify-end">
+                <flux:button wire:click="$set('showDetailsModal', false)">{{ __('Close') }}</flux:button>
+            </div>
+        </div>
+    </flux:modal>
 </div>

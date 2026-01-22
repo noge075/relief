@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Repositories\Contracts\UserRepositoryInterface;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\DB;
 
 class EloquentUserRepository extends BaseRepository implements UserRepositoryInterface
 {
@@ -26,7 +27,14 @@ class EloquentUserRepository extends BaseRepository implements UserRepositoryInt
 
         $this->applyFilters($query, $filters);
 
-        return $query->orderBy($sortCol, $sortAsc ? 'asc' : 'desc')->paginate($perPage);
+        if ($sortCol === 'name') {
+            $query->orderBy('last_name', $sortAsc ? 'asc' : 'desc')
+                  ->orderBy('first_name', $sortAsc ? 'asc' : 'desc');
+        } else {
+            $query->orderBy($sortCol, $sortAsc ? 'asc' : 'desc');
+        }
+
+        return $query->paginate($perPage);
     }
 
     public function getByDepartment(int $departmentId): Collection
@@ -40,7 +48,14 @@ class EloquentUserRepository extends BaseRepository implements UserRepositoryInt
 
         $this->applyFilters($query, $filters);
 
-        return $query->orderBy($sortCol, $sortAsc ? 'asc' : 'desc')->paginate($perPage);
+        if ($sortCol === 'name') {
+            $query->orderBy('last_name', $sortAsc ? 'asc' : 'desc')
+                  ->orderBy('first_name', $sortAsc ? 'asc' : 'desc');
+        } else {
+            $query->orderBy($sortCol, $sortAsc ? 'asc' : 'desc');
+        }
+
+        return $query->paginate($perPage);
     }
 
     protected function applyFilters($query, array $filters)
@@ -48,7 +63,9 @@ class EloquentUserRepository extends BaseRepository implements UserRepositoryInt
         if (!empty($filters['search'])) {
             $search = $filters['search'];
             $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
+                $q->where('last_name', 'like', "%{$search}%")
+                  ->orWhere('first_name', 'like', "%{$search}%")
+                  ->orWhere(DB::raw("CONCAT(last_name, ' ', first_name)"), 'like', "%{$search}%")
                   ->orWhere('email', 'like', "%{$search}%");
             });
         }
@@ -90,7 +107,7 @@ class EloquentUserRepository extends BaseRepository implements UserRepositoryInt
             $query->where('year', $year)
                   ->where('type', 'vacation');
         })
-        ->orderBy('name')
+        ->orderBy('last_name')
         ->get();
     }
 }

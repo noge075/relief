@@ -11,6 +11,7 @@ use App\Livewire\OrganizationChart;
 use App\Livewire\Payroll\MonthlyReport;
 use App\Livewire\Roles\ManageRoles;
 use App\Livewire\Settings\ManageAuditLogs;
+use App\Livewire\Settings\ManageDepartments; // Új
 use App\Livewire\Settings\ManageSettings;
 use App\Livewire\Settings\ManageWorkSchedules;
 use App\Livewire\SpecialDays\ManageSpecialDays;
@@ -30,9 +31,10 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/employees', ManageEmployees::class)->name('employees.index');
     Route::get('/employees/balances', ManageLeaveBalances::class)->name('employees.balances');
     Route::get('/approvals', ManageApprovals::class)->name('approvals.index');
-    Route::get('/organization', OrganizationChart::class)->name('organization.index'); // Új
+    Route::get('/organization', OrganizationChart::class)->name('organization.index');
     Route::get('/payroll', MonthlyReport::class)->name('payroll.report');
     Route::get('/work-schedules', ManageWorkSchedules::class)->name('work-schedules.index');
+    Route::get('/departments', ManageDepartments::class)->name('departments.index'); // Új
     
     // Settings routes protected by permission
     Route::middleware(['can:manage settings'])->group(function () {

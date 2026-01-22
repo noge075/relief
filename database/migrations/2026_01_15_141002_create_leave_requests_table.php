@@ -28,6 +28,7 @@ return new class extends Migration
             $table->boolean('is_policy_override')->default(false);
 
             $table->timestamps();
+            $table->softDeletes();
         });
     }
 

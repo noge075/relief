@@ -29,6 +29,7 @@ enum PermissionType: string
     case VIEW_ALL_LEAVE_REQUESTS = 'view all leave requests';
     case VIEW_LEAVE_REQUEST_DETAILS = 'view leave request details';
     case CREATE_LEAVE_REQUESTS = 'create leave requests';
+    case CREATE_PAST_LEAVE_REQUESTS = 'create past leave requests';
     case APPROVE_LEAVE_REQUESTS = 'approve leave requests';
     case DELETE_LEAVE_REQUESTS = 'delete leave requests';
 

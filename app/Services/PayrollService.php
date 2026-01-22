@@ -15,6 +15,7 @@ use Carbon\Carbon;
 use Carbon\CarbonPeriod;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Pagination\LengthAwarePaginator;
 
 class PayrollService
 {
@@ -30,7 +31,7 @@ class PayrollService
         $end = $start->copy()->endOfMonth();
 
         // 1. Dolgozók
-        $users = \App\Models\User::with(['department', 'workSchedule'])->where('is_active', true)->orderBy('name')->get();
+        $users = User::with(['department', 'workSchedule'])->where('is_active', true)->orderBy('name')->get();
 
         // 2. Munkanapok száma a hónapban
         $holidays = $this->holidayService->getHolidaysInRange($start, $end);
@@ -114,7 +115,7 @@ class PayrollService
         $start = Carbon::createFromDate($year, $month, 1)->startOfMonth();
         $end = $start->copy()->endOfMonth();
 
-        $users = \App\Models\User::with(['department', 'workSchedule'])->where('is_active', true)->orderBy('name')->get();
+        $users = User::with(['department', 'workSchedule'])->where('is_active', true)->orderBy('name')->get();
         $holidays = $this->holidayService->getHolidaysInRange($start, $end);
         $extraWorkdays = $this->holidayService->getExtraWorkdaysInRange($start, $end);
 
@@ -245,5 +246,46 @@ class PayrollService
     {
         $date = Carbon::createFromDate($year, $month, 1)->startOfMonth()->format('Y-m-d');
         return MonthlyClosure::where('month', $date)->first();
+    }
+    
+    // --- Exports ---
+    
+    public function storeExport(int $year, int $month, User $user, $fileContent, string $filename): void
+    {
+        $date = Carbon::createFromDate($year, $month, 1)->startOfMonth()->format('Y-m-d');
+        
+        $closure = MonthlyClosure::firstOrCreate(
+            ['month' => $date],
+            ['is_closed' => false]
+        );
+        
+        $tempPath = tempnam(sys_get_temp_dir(), 'payroll_export');
+        file_put_contents($tempPath, $fileContent);
+        
+        $closure->addMedia($tempPath)
+               ->usingFileName($filename)
+               ->toMediaCollection('exports');
+    }
+    
+    public function getExports(int $year, int $month, int $perPage = 5, int $page = 1)
+    {
+        $date = Carbon::createFromDate($year, $month, 1)->startOfMonth()->format('Y-m-d');
+        $closure = MonthlyClosure::where('month', $date)->first();
+        
+        if (!$closure) {
+            return new LengthAwarePaginator([], 0, $perPage, $page);
+        }
+        
+        $media = $closure->getMedia('exports')->sortByDesc('created_at');
+        
+        $items = $media->slice(($page - 1) * $perPage, $perPage)->values();
+        
+        return new LengthAwarePaginator(
+            $items,
+            $media->count(),
+            $perPage,
+            $page,
+            ['path' => LengthAwarePaginator::resolveCurrentPath()]
+        );
     }
 }

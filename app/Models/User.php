@@ -4,6 +4,8 @@ namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use App\Enums\EmploymentType;
+use App\Enums\PermissionType;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -25,10 +27,12 @@ class User extends Authenticatable
      * @var list<string>
      */
     protected $fillable = [
-        'name', 'email', 'password',
+        'last_name', 'first_name',
+        'email', 'password',
         'employment_type', 'department_id', 'manager_id',
         'work_schedule_id', 'hired_at', 'is_active',
-        'signature_path', // Új mező
+        'signature_path',
+        'id_card_number', 'tax_id', 'ssn', 'address', 'phone',
     ];
 
     /**
@@ -67,16 +71,22 @@ class User extends Authenticatable
             ->dontSubmitEmptyLogs();
     }
 
+    protected function name(): Attribute
+    {
+        return Attribute::make(
+            get: fn (mixed $value, array $attributes) => trim(($attributes['last_name'] ?? '') . ' ' . ($attributes['first_name'] ?? '')),
+        );
+    }
+
     /**
      * Get the user's initials
      */
     public function initials(): string
     {
-        return Str::of($this->name)
-            ->explode(' ')
-            ->take(2)
-            ->map(fn ($word) => Str::substr($word, 0, 1))
-            ->implode('');
+        $first = Str::substr($this->last_name ?? '', 0, 1);
+        $second = Str::substr($this->first_name ?? '', 0, 1);
+        
+        return strtoupper($first . $second);
     }
 
     public function department() {
@@ -113,7 +123,7 @@ class User extends Authenticatable
     // Impersonate jogosultság
     public function canImpersonate()
     {
-        return $this->can('view users');
+        return $this->can(PermissionType::VIEW_USERS->value) || $this->can(PermissionType::VIEW_ALL_USERS->value);
     }
 
     public function canBeImpersonated()

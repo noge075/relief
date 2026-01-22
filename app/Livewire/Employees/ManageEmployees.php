@@ -10,6 +10,7 @@ use App\Repositories\Contracts\UserRepositoryInterface;
 use App\Services\RoleService;
 use App\Services\UserService;
 use App\Models\Department;
+use App\Models\User;
 use App\Models\WorkSchedule;
 use Flux\Flux;
 use Livewire\Component;
@@ -25,10 +26,10 @@ class ManageEmployees extends Component
 
     public $showModal = false;
     public $isEditing = false;
-    
+
     public $search = '';
     public $perPage = 10;
-    
+
     // Filters
     public $departmentFilter = null;
     public $roleFilter = null;
@@ -39,13 +40,20 @@ class ManageEmployees extends Component
     public $editingId = null;
 
     // Form
-    public $name = '';
+    public $last_name = '';
+    public $first_name = '';
     public $email = '';
     public $password = '';
     public $department_id = null;
     public $work_schedule_id = null;
     public $employment_type = null;
     public $role;
+    public $id_card_number = '';
+    public $tax_id = '';
+    public $ssn = '';
+    public $address = '';
+    public $phone = '';
+    
     public $selectedPermissions = [];
     public $rolePermissions = [];
     
@@ -72,7 +80,7 @@ class ManageEmployees extends Component
         $this->sortCol = 'name';
         $this->allPermissions = $roleService->getGroupedPermissions();
         $this->updateRolePermissions();
-        
+
         $this->perPage = request()->query('per_page', 10);
     }
 
@@ -82,10 +90,10 @@ class ManageEmployees extends Component
     public function updatedStatusFilter() { $this->resetPage(); }
     public function updatedEmploymentTypeFilter() { $this->resetPage(); }
     public function updatedWorkScheduleFilter() { $this->resetPage(); }
-    
-    public function updatedPerPage() 
-    { 
-        $this->resetPage(); 
+
+    public function updatedPerPage()
+    {
+        $this->resetPage();
     }
     
     public function updatedRole()
@@ -96,10 +104,39 @@ class ManageEmployees extends Component
     public function updateRolePermissions()
     {
         if ($this->role) {
-            $roleModel = Role::where('name', $this->role)->first();
-            $this->rolePermissions = $roleModel ? $roleModel->permissions->pluck('name')->toArray() : [];
+            if ($this->role === RoleType::SUPER_ADMIN->value) {
+                $allPermissionNames = [];
+                foreach ($this->allPermissions as $group => $perms) {
+                    foreach ($perms as $perm) {
+                        $allPermissionNames[] = $perm->name;
+                    }
+                }
+                $this->rolePermissions = $allPermissionNames;
+            } else {
+                $roleModel = Role::where('name', $this->role)->first();
+                $this->rolePermissions = $roleModel ? $roleModel->permissions->pluck('name')->toArray() : [];
+            }
         } else {
             $this->rolePermissions = [];
+        }
+    }
+    
+    public function toggleAllPermissions()
+    {
+        $allPermissionNames = [];
+        foreach ($this->allPermissions as $group => $perms) {
+            foreach ($perms as $perm) {
+                $allPermissionNames[] = $perm->name;
+            }
+        }
+        
+        $toggleablePermissions = array_values(array_diff($allPermissionNames, $this->rolePermissions));
+        $selectedToggleable = array_intersect($this->selectedPermissions, $toggleablePermissions);
+        
+        if (count($selectedToggleable) === count($toggleablePermissions)) {
+            $this->selectedPermissions = [];
+        } else {
+            $this->selectedPermissions = $toggleablePermissions;
         }
     }
 
@@ -114,6 +151,29 @@ class ManageEmployees extends Component
         $this->perPage = 10;
         $this->resetPage();
     }
+    
+    public function canImpersonate(User $targetUser)
+    {
+        $currentUser = auth()->user();
+        
+        if ($currentUser->id === $targetUser->id) {
+            return false;
+        }
+        
+        if ($targetUser->hasRole(RoleType::SUPER_ADMIN->value) && !$currentUser->hasRole(RoleType::SUPER_ADMIN->value)) {
+            return false;
+        }
+        
+        if ($currentUser->can(PermissionType::VIEW_ALL_USERS->value)) {
+            return true;
+        }
+        
+        if ($currentUser->can(PermissionType::VIEW_USERS->value) && $targetUser->manager_id === $currentUser->id) {
+            return true;
+        }
+        
+        return false;
+    }
 
     public function render(UserService $userService)
     {
@@ -127,7 +187,7 @@ class ManageEmployees extends Component
         ];
 
         $users = $userService->getEmployeesList(auth()->user(), (int) $this->perPage, $filters, $this->sortCol, $this->sortAsc);
-        
+
         $users->appends([
             'search' => $this->search,
             'per_page' => $this->perPage,
@@ -153,13 +213,6 @@ class ManageEmployees extends Component
     {
         $this->authorize(PermissionType::CREATE_USERS->value);
         $this->resetForm();
-        
-        $this->department_id = Department::first()?->id;
-        $this->work_schedule_id = WorkSchedule::first()?->id;
-        $this->employment_type = EmploymentType::STANDARD->value;
-        $this->role = RoleType::EMPLOYEE->value;
-        $this->updateRolePermissions();
-
         $this->isEditing = false;
         $this->showModal = true;
     }
@@ -173,12 +226,19 @@ class ManageEmployees extends Component
 
         $user = $userRepository->find($id);
 
-        $this->name = $user->name;
+        $this->last_name = $user->last_name;
+        $this->first_name = $user->first_name;
         $this->email = $user->email;
         $this->department_id = $user->department_id;
         $this->work_schedule_id = $user->work_schedule_id;
         $this->employment_type = $user->employment_type?->value;
         $this->role = $user->roles->first()?->name ?? null;
+        
+        $this->id_card_number = $user->id_card_number;
+        $this->tax_id = $user->tax_id;
+        $this->ssn = $user->ssn;
+        $this->address = $user->address;
+        $this->phone = $user->phone;
         
         $this->selectedPermissions = $user->getDirectPermissions()->pluck('name')->toArray();
         $this->updateRolePermissions();
@@ -195,13 +255,19 @@ class ManageEmployees extends Component
         }
 
         $rules = [
-            'name' => 'required|min:3',
+            'last_name' => 'required|min:2',
+            'first_name' => 'required|min:2',
             'email' => 'required|email|unique:users,email,' . ($this->editingId ?? 'NULL'),
             'department_id' => 'nullable|exists:departments,id',
             'work_schedule_id' => 'nullable|exists:work_schedules,id',
             'employment_type' => 'required',
             'role' => 'required|exists:roles,name',
             'selectedPermissions' => 'array',
+            'id_card_number' => 'nullable|string|max:20',
+            'tax_id' => 'nullable|string|max:20',
+            'ssn' => 'nullable|string|max:20',
+            'address' => 'nullable|string|max:255',
+            'phone' => 'nullable|string|max:20',
         ];
 
         if (!$this->isEditing) {
@@ -235,7 +301,12 @@ class ManageEmployees extends Component
 
     private function resetForm()
     {
-        $this->reset(['name', 'email', 'password', 'department_id', 'work_schedule_id', 'employment_type', 'role', 'editingId', 'selectedPermissions']);
+        $this->reset([
+            'last_name', 'first_name', 'email', 'password', 
+            'department_id', 'work_schedule_id', 'employment_type', 'role', 
+            'editingId', 'selectedPermissions',
+            'id_card_number', 'tax_id', 'ssn', 'address', 'phone'
+        ]);
         $this->updateRolePermissions();
     }
 }

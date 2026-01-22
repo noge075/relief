@@ -165,25 +165,30 @@
                             @endif
                         </flux:table.cell>
                         <flux:table.cell>
-                            @canany([\App\Enums\PermissionType::EDIT_USERS->value, \App\Enums\PermissionType::DELETE_USERS->value])
-                                <flux:dropdown>
-                                    <flux:button variant="ghost" size="sm" icon="ellipsis-horizontal"/>
+                            <flux:dropdown>
+                                <flux:button variant="ghost" size="sm" icon="ellipsis-horizontal"/>
 
-                                    <flux:menu>
-                                        @can(\App\Enums\PermissionType::EDIT_USERS->value)
-                                            <flux:menu.item icon="pencil-square" wire:click="openEdit({{ $user->id }})">
-                                                {{ __('Edit') }}
-                                            </flux:menu.item>
-                                        @endcan
+                                <flux:menu>
+                                    @if($this->canImpersonate($user))
+                                        <flux:menu.item icon="user-plus" href="{{ route('impersonate', $user->id) }}">
+                                            {{ __('Impersonate') }}
+                                        </flux:menu.item>
+                                        <flux:menu.separator />
+                                    @endif
 
-                                        @can(\App\Enums\PermissionType::DELETE_USERS->value)
-                                            <flux:menu.item icon="trash" variant="danger" wire:click="delete({{ $user->id }})"
-                                                            wire:confirm="{{ __('Are you sure you want to delete this user?') }}">{{ __('Delete') }}
-                                            </flux:menu.item>
-                                        @endcan
-                                    </flux:menu>
-                                </flux:dropdown>
-                            @endcanany
+                                    @can(\App\Enums\PermissionType::EDIT_USERS->value)
+                                        <flux:menu.item icon="pencil-square" wire:click="openEdit({{ $user->id }})">
+                                            {{ __('Edit') }}
+                                        </flux:menu.item>
+                                    @endcan
+
+                                    @can(\App\Enums\PermissionType::DELETE_USERS->value)
+                                        <flux:menu.item icon="trash" variant="danger" wire:click="delete({{ $user->id }})"
+                                                        wire:confirm="{{ __('Are you sure you want to delete this user?') }}">{{ __('Delete') }}
+                                        </flux:menu.item>
+                                    @endcan
+                                </flux:menu>
+                            </flux:dropdown>
                         </flux:table.cell>
                     </flux:table.row>
                 @endforeach

@@ -17,6 +17,7 @@ return new class extends Migration
             $table->string('type'); // 'holiday' (pihenőnap), 'workday' (munkanap)
             $table->string('description')->nullable();
             $table->timestamps();
+            $table->softDeletes();
         });
     }
 

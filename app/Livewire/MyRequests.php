@@ -2,25 +2,34 @@
 
 namespace App\Livewire;
 
-use App\Enums\LeaveStatus;
-use App\Enums\LeaveType;
 use App\Models\LeaveRequest;
-use Carbon\Carbon;
 use Flux\Flux;
-use Livewire\Attributes\Title;
 use Livewire\Component;
 use Livewire\WithPagination;
+use Livewire\WithFileUploads;
+use Livewire\Attributes\Url;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
 class MyRequests extends Component
 {
     use AuthorizesRequests;
     use WithPagination;
+    use WithFileUploads;
 
+    #[Url]
     public $statusFilter = '';
+    #[Url]
     public $typeFilter = '';
+    #[Url]
     public $yearFilter = null;
+    #[Url]
     public $perPage = 10;
+    
+    // Modal
+    public $showDetailsModal = false;
+    public $selectedRequest = null;
+    public $upload;
 
     protected $queryString = [
         'statusFilter' => ['except' => ''],
@@ -46,6 +55,45 @@ class MyRequests extends Component
         $this->yearFilter = null;
         $this->perPage = 10;
         $this->resetPage();
+    }
+    
+    public function openDetails($id)
+    {
+        $this->selectedRequest = LeaveRequest::with('media')->find($id);
+        
+        if (!$this->selectedRequest || $this->selectedRequest->user_id !== auth()->id()) {
+            return;
+        }
+        
+        $this->reset('upload');
+        $this->showDetailsModal = true;
+    }
+    
+    public function saveDocument()
+    {
+        $this->validate([
+            'upload' => 'required|file|max:10240', // 10MB
+        ]);
+        
+        if ($this->selectedRequest) {
+            $this->selectedRequest->addMedia($this->upload)
+                ->toMediaCollection('documents');
+                
+            Flux::toast(__('Document uploaded successfully.'), variant: 'success');
+            $this->reset('upload');
+            $this->selectedRequest->refresh();
+        }
+    }
+    
+    public function deleteDocument($mediaId)
+    {
+        $media = Media::find($mediaId);
+        
+        if ($media && $media->model_id === $this->selectedRequest->id) {
+            $media->delete();
+            Flux::toast(__('Document deleted.'), variant: 'success');
+            $this->selectedRequest->refresh();
+        }
     }
 
     public function render()

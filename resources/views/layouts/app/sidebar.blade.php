@@ -4,7 +4,7 @@
         @include('partials.head')
     </head>
     <body class="min-h-screen bg-white dark:bg-zinc-800">
-        <flux:sidebar sticky collapsible="mobile" class="w-72 border-e border-zinc-200 bg-zinc-50 dark:bg-zinc-900">
+        <flux:sidebar sticky collapsible="mobile" class="w-72 border-e border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900">
             <flux:sidebar.header>
                 <x-app-logo :sidebar="true" href="{{ route('dashboard') }}" wire:navigate />
                 <flux:sidebar.collapse class="lg:hidden" />
@@ -33,7 +33,7 @@
                 </flux:sidebar.group>
 
                 <!-- Management -->
-                @if(auth()->user()->can('view users') || auth()->user()->can('approve leave requests') || auth()->user()->can('adjust leave balances') || auth()->user()->can('view payroll data') || auth()->user()->can('manage work schedules'))
+                @if(auth()->user()->can('view users') || auth()->user()->can('approve leave requests') || auth()->user()->can('adjust leave balances') || auth()->user()->can('view payroll data') || auth()->user()->can('manage work schedules') || auth()->user()->can('manage departments'))
                     <flux:sidebar.group :heading="__('Management')" class="grid">
                         @can('view users')
                             <flux:sidebar.item icon="users" :href="route('employees.index')" :current="request()->routeIs('employees.index')" wire:navigate>
@@ -41,6 +41,12 @@
                             </flux:sidebar.item>
                             <flux:sidebar.item icon="user-group" :href="route('organization.index')" :current="request()->routeIs('organization.index')" wire:navigate>
                                 {{ __('Organization Chart') }}
+                            </flux:sidebar.item>
+                        @endcan
+
+                        @can('manage departments')
+                            <flux:sidebar.item icon="building-office" :href="route('departments.index')" :current="request()->routeIs('departments.index')" wire:navigate>
+                                {{ __('Departments') }}
                             </flux:sidebar.item>
                         @endcan
 
@@ -87,11 +93,17 @@
                                 {{ __('Audit Logs') }}
                             </flux:sidebar.item>
                         @endcan
-                        @can('viewHorizon')
-                            <flux:sidebar.item icon="server" href="/horizon" target="_blank">{{ __('Horizon') }}</flux:sidebar.item>
-                        @endcan
                     </flux:sidebar.group>
                 @endcan
+
+                <!-- Platform -->
+                <flux:sidebar.group :heading="__('Platform')" class="grid">
+                    <flux:sidebar.item icon="code-bracket" href="https://github.com/livewire/flux" target="_blank">{{ __('Repository') }}</flux:sidebar.item>
+                    <flux:sidebar.item icon="book-open" href="https://flux.laravel-livewire.com" target="_blank">{{ __('Documentation') }}</flux:sidebar.item>
+                    @can('viewHorizon')
+                        <flux:sidebar.item icon="server" href="/horizon" target="_blank">{{ __('Horizon') }}</flux:sidebar.item>
+                    @endcan
+                </flux:sidebar.group>
             </flux:sidebar.nav>
 
             <flux:spacer />

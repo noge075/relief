@@ -18,7 +18,7 @@ return new class extends Migration
             $table->string('status');
             $table->decimal('worked_hours', 4, 2)->nullable();
             $table->timestamps();
-
+            $table->softDeletes();
             $table->unique(['user_id', 'date']);
         });
     }

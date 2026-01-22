@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Enums\LeaveStatus;
 use App\Enums\LeaveType;
+use App\Enums\PermissionType;
 use App\Enums\RoleType;
 use App\Models\Setting;
 use App\Models\User;
@@ -33,14 +34,22 @@ class LeaveRequestService
     {
         $startDate = Carbon::parse($data['start_date']);
         $endDate = Carbon::parse($data['end_date']);
+        $type = LeaveType::from($data['type']);
+        
+        // Múltbeli dátum ellenőrzése
+        if ($startDate->isPast() && !$startDate->isToday() && $type !== LeaveType::SICK) {
+            if (!$user->can(PermissionType::CREATE_PAST_LEAVE_REQUESTS->value)) {
+                throw ValidationException::withMessages([
+                    'date' => __('Cannot create leave request for past dates (except sick leave).')
+                ]);
+            }
+        }
         
         // Havi zárás ellenőrzése
         $this->validateMonthlyClosure($startDate);
         if ($startDate->month !== $endDate->month) {
             $this->validateMonthlyClosure($endDate);
         }
-
-        $type = LeaveType::from($data['type']);
         
         // 1. Átfedés vizsgálat
         $overlapping = $this->leaveRequestRepository->findOverlapping(
@@ -122,6 +131,16 @@ class LeaveRequestService
 
         $startDate = Carbon::parse($data['start_date']);
         $endDate = Carbon::parse($data['end_date']);
+        $type = LeaveType::from($data['type']);
+        
+        // Múltbeli dátum ellenőrzése (módosításkor is)
+        if ($startDate->isPast() && !$startDate->isToday() && $type !== LeaveType::SICK) {
+            if (!$user->can(PermissionType::CREATE_PAST_LEAVE_REQUESTS->value)) {
+                throw ValidationException::withMessages([
+                    'date' => __('Cannot create leave request for past dates (except sick leave).')
+                ]);
+            }
+        }
         
         // Havi zárás ellenőrzése
         $this->validateMonthlyClosure($request->start_date);
@@ -132,8 +151,6 @@ class LeaveRequestService
         if ($startDate->month !== $endDate->month) {
             $this->validateMonthlyClosure($endDate);
         }
-
-        $type = LeaveType::from($data['type']);
 
         // 1. Átfedés
         $overlapping = $this->leaveRequestRepository->findOverlapping(

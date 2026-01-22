@@ -17,6 +17,7 @@ return new class extends Migration
             $table->date('month');
             $table->string('status')->default('uploaded');
             $table->timestamps();
+            $table->softDeletes();
 
             $table->unique(['user_id', 'month']);
         });

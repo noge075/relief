@@ -18,6 +18,7 @@ return new class extends Migration
             $table->foreignId('closed_by')->nullable()->constrained('users');
             $table->timestamp('closed_at')->nullable();
             $table->timestamps();
+            $table->softDeletes();
         });
     }
 

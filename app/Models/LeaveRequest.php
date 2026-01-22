@@ -7,10 +7,12 @@ use App\Enums\LeaveType;
 use Illuminate\Database\Eloquent\Model;
 use Spatie\Activitylog\Traits\LogsActivity;
 use Spatie\Activitylog\LogOptions;
+use Spatie\MediaLibrary\HasMedia;
+use Spatie\MediaLibrary\InteractsWithMedia;
 
-class LeaveRequest extends Model
+class LeaveRequest extends Model implements HasMedia
 {
-    use LogsActivity;
+    use LogsActivity, InteractsWithMedia;
 
     protected $fillable = [
         'user_id',
@@ -27,10 +29,10 @@ class LeaveRequest extends Model
     ];
 
     protected $casts = [
-        'start_date' => 'date',
-        'end_date' => 'date',
         'type' => LeaveType::class,
         'status' => LeaveStatus::class,
+        'start_date' => 'date',
+        'end_date' => 'date',
         'has_warning' => 'boolean',
         'days_count' => 'int'
     ];

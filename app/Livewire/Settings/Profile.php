@@ -2,130 +2,131 @@
 
 namespace App\Livewire\Settings;
 
-use App\Concerns\ProfileValidationRules;
-use Illuminate\Contracts\Auth\MustVerifyEmail;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Session;
-use Illuminate\Support\Facades\Storage;
-use Livewire\Attributes\Computed;
+use Flux\Flux;
 use Livewire\Component;
 use Livewire\WithFileUploads;
-use Flux\Flux;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 
 class Profile extends Component
 {
-    use ProfileValidationRules;
     use WithFileUploads;
 
-    public string $name = '';
-    public string $email = '';
+    public $last_name = '';
+    public $first_name = '';
+    public $email = '';
     
-    // Signature
-    public $signature; // File upload
-    public $signatureData; // Base64 from pad
+    // Új mezők
+    public $id_card_number = '';
+    public $tax_id = '';
+    public $ssn = '';
+    public $address = '';
+    public $phone = '';
 
-    /**
-     * Mount the component.
-     */
-    public function mount(): void
+    // Signature
+    public $signature; // Uploaded file
+    public $signatureData; // Drawn signature (base64)
+    public $currentSignature;
+
+    public function mount()
     {
-        $this->name = Auth::user()->name;
-        $this->email = Auth::user()->email;
+        $user = auth()->user();
+        
+        $this->last_name = $user->last_name;
+        $this->first_name = $user->first_name;
+        $this->email = $user->email;
+        
+        $this->id_card_number = $user->id_card_number;
+        $this->tax_id = $user->tax_id;
+        $this->ssn = $user->ssn;
+        $this->address = $user->address;
+        $this->phone = $user->phone;
+        
+        $this->currentSignature = $user->signature_path;
     }
 
-    /**
-     * Update the profile information for the currently authenticated user.
-     */
-    public function updateProfileInformation(): void
+    public function save()
     {
-        $user = Auth::user();
+        $user = auth()->user();
 
-        $validated = $this->validate($this->profileRules($user->id));
+        $validated = $this->validate([
+            'last_name' => ['required', 'string', 'max:255'],
+            'first_name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'email', 'max:255', Rule::unique('users')->ignore($user->id)],
+            'id_card_number' => ['nullable', 'string', 'max:20'],
+            'tax_id' => ['nullable', 'string', 'max:20'],
+            'ssn' => ['nullable', 'string', 'max:20'],
+            'address' => ['nullable', 'string', 'max:255'],
+            'phone' => ['nullable', 'string', 'max:20'],
+        ]);
 
-        $user->fill($validated);
+        $user->update($validated);
 
-        if ($user->isDirty('email')) {
-            $user->email_verified_at = null;
-        }
-
-        $user->save();
-
-        $this->dispatch('profile-updated', name: $user->name);
-        
         Flux::toast(__('Profile updated successfully.'), variant: 'success');
     }
     
-    public function saveSignature()
+    public function saveSignatureUpload()
     {
-        $user = Auth::user();
+        $this->validate([
+            'signature' => 'required|image|max:1024', // 1MB
+        ]);
+
+        $user = auth()->user();
         
-        if ($this->signature) {
-            $this->validate([
-                'signature' => 'image|max:1024', // 1MB Max
-            ]);
-            
-            // Töröljük a régit
-            if ($user->signature_path) {
-                Storage::disk('public')->delete($user->signature_path);
-            }
-            
-            $path = $this->signature->store('signatures', 'public');
-            $user->update(['signature_path' => $path]);
-            
-            $this->reset('signature');
-        } elseif ($this->signatureData) {
-            // Base64 mentése
-            $image = str_replace('data:image/png;base64,', '', $this->signatureData);
-            $image = str_replace(' ', '+', $image);
-            $imageName = 'signatures/' . $user->id . '_' . time() . '.png';
-            
-            // Töröljük a régit
-            if ($user->signature_path) {
-                Storage::disk('public')->delete($user->signature_path);
-            }
-            
-            Storage::disk('public')->put($imageName, base64_decode($image));
-            $user->update(['signature_path' => $imageName]);
-            
-            $this->reset('signatureData');
+        if ($user->signature_path) {
+            Storage::disk('public')->delete($user->signature_path);
         }
+
+        $path = $this->signature->store('signatures', 'public');
+        $user->update(['signature_path' => $path]);
+        
+        $this->currentSignature = $path;
+        $this->reset('signature');
+        
+        Flux::toast(__('Signature saved successfully.'), variant: 'success');
+    }
+    
+    public function saveSignatureDraw()
+    {
+        $this->validate([
+            'signatureData' => 'required|string',
+        ]);
+        
+        $user = auth()->user();
+        
+        // Base64 decode
+        $image = str_replace('data:image/png;base64,', '', $this->signatureData);
+        $image = str_replace(' ', '+', $image);
+        $imageName = 'signatures/' . $user->id . '_' . time() . '.png';
+        
+        if ($user->signature_path) {
+            Storage::disk('public')->delete($user->signature_path);
+        }
+        
+        Storage::disk('public')->put($imageName, base64_decode($image));
+        $user->update(['signature_path' => $imageName]);
+        
+        $this->currentSignature = $imageName;
+        $this->reset('signatureData');
         
         Flux::toast(__('Signature saved successfully.'), variant: 'success');
     }
     
     public function deleteSignature()
     {
-        $user = Auth::user();
+        $user = auth()->user();
         
         if ($user->signature_path) {
             Storage::disk('public')->delete($user->signature_path);
             $user->update(['signature_path' => null]);
-            Flux::toast(__('Signature deleted.'), variant: 'success');
         }
+        
+        $this->currentSignature = null;
+        Flux::toast(__('Signature deleted.'), variant: 'success');
     }
 
-    /**
-     * Send an email verification notification to the current user.
-     */
-    public function resendVerificationNotification(): void
+    public function render()
     {
-        $user = Auth::user();
-
-        if ($user->hasVerifiedEmail()) {
-            $this->redirectIntended(default: route('dashboard', absolute: false));
-
-            return;
-        }
-
-        $user->sendEmailVerificationNotification();
-
-        Session::flash('status', 'verification-link-sent');
+        return view('livewire.settings.profile');
     }
-
-    #[Computed]
-    public function hasUnverifiedEmail(): bool
-    {
-        return Auth::user() instanceof MustVerifyEmail && ! Auth::user()->hasVerifiedEmail();
-    }
-
 }
