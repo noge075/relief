@@ -14,7 +14,7 @@
         </div>
     </div>
 
-    <flux:card class="!p-0 overflow-hidden">
+    <flux:card class="p-0! overflow-hidden">
         <flux:table>
             <flux:table.columns>
                 <flux:table.column sortable :sorted="$sortCol === 'name'" :direction="$sortAsc ? 'asc' : 'desc'" wire:click="sortBy('name')">{{ __('Name') }}</flux:table.column>
@@ -74,7 +74,7 @@
                         {{ __('Per Page') }}
                     </div>
                     <div class="w-20">
-                        <flux:select wire:model.live="perPage" class="!border-0 !shadow-none !rounded-none focus:!ring-0">
+                        <flux:select wire:model.live="perPage" class="border-0! shadow-none! rounded-none! focus:ring-0!">
                             <flux:select.option value="5">5</flux:select.option>
                             <flux:select.option value="10">10</flux:select.option>
                             <flux:select.option value="15">15</flux:select.option>
@@ -92,7 +92,7 @@
     </flux:card>
 
     <!-- Modal -->
-    <flux:modal wire:model="showModal" class="min-w-[500px]">
+    <flux:modal wire:model="showModal" class="min-w-125">
         <div class="space-y-6">
             <div>
                 <flux:heading size="lg">{{ $editingId ? __('Edit Work Schedule') : __('New Work Schedule') }}</flux:heading>

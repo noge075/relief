@@ -31,7 +31,7 @@ class AttendanceTracker extends Component
             'user_id' => auth()->id(),
             'date' => Carbon::today(),
             'check_in' => Carbon::now(),
-            'status' => 'present', // Alapértelmezett státusz
+            'status' => 'present',
         ]);
 
         $this->loadCurrentLog();
@@ -42,7 +42,7 @@ class AttendanceTracker extends Component
     {
         if ($this->currentLog) {
             $checkOut = Carbon::now();
-            $workedHours = $this->currentLog->check_in->diffInHours($checkOut); // Egyszerűsített számítás
+            $workedHours = $this->currentLog->check_in->diffInHours($checkOut);
 
             $this->currentLog->update([
                 'check_out' => $checkOut,

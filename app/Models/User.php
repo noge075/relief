@@ -2,11 +2,10 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
 use App\Enums\EmploymentType;
 use App\Enums\PermissionType;
 use Illuminate\Database\Eloquent\Casts\Attribute;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Str;
@@ -15,11 +14,12 @@ use Spatie\Permission\Traits\HasRoles;
 use Spatie\Activitylog\Traits\LogsActivity;
 use Spatie\Activitylog\LogOptions;
 use Lab404\Impersonate\Models\Impersonate;
+use Spatie\MediaLibrary\HasMedia;
+use Spatie\MediaLibrary\InteractsWithMedia;
 
-class User extends Authenticatable
+class User extends Authenticatable implements HasMedia
 {
-    /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable, TwoFactorAuthenticatable, HasRoles, LogsActivity, Impersonate;
+    use Notifiable, TwoFactorAuthenticatable, HasRoles, LogsActivity, Impersonate, SoftDeletes, InteractsWithMedia;
 
     /**
      * The attributes that are mass assignable.
@@ -45,6 +45,15 @@ class User extends Authenticatable
         'two_factor_secret',
         'two_factor_recovery_codes',
         'remember_token',
+    ];
+
+    /**
+     * The accessors to append to the model's array form.
+     *
+     * @var array
+     */
+    protected $appends = [
+        'profile_photo_url',
     ];
 
     /**
@@ -74,7 +83,7 @@ class User extends Authenticatable
     protected function name(): Attribute
     {
         return Attribute::make(
-            get: fn (mixed $value, array $attributes) => trim(($attributes['last_name'] ?? '') . ' ' . ($attributes['first_name'] ?? '')),
+            get: fn(mixed $value, array $attributes) => trim(($attributes['last_name'] ?? '') . ' ' . ($attributes['first_name'] ?? '')),
         );
     }
 
@@ -85,41 +94,53 @@ class User extends Authenticatable
     {
         $first = Str::substr($this->last_name ?? '', 0, 1);
         $second = Str::substr($this->first_name ?? '', 0, 1);
-        
+
         return strtoupper($first . $second);
     }
 
-    public function department() {
+    public function getProfilePhotoUrlAttribute()
+    {
+        return $this->getFirstMediaUrl('avatar');
+    }
+
+    public function department()
+    {
         return $this->belongsTo(Department::class);
     }
 
-    public function workSchedule() {
+    public function workSchedule()
+    {
         return $this->belongsTo(WorkSchedule::class);
     }
 
     // Hierarchia
-    public function manager() {
+    public function manager()
+    {
         return $this->belongsTo(User::class, 'manager_id');
     }
 
-    public function subordinates() {
+    public function subordinates()
+    {
         return $this->hasMany(User::class, 'manager_id');
     }
 
     // Szabadság modul
-    public function leaveBalances() {
+    public function leaveBalances()
+    {
         return $this->hasMany(LeaveBalance::class);
     }
 
-    public function leaveRequests() {
+    public function leaveRequests()
+    {
         return $this->hasMany(LeaveRequest::class);
     }
 
     // Dokumentumok
-    public function attendanceDocuments() {
+    public function attendanceDocuments()
+    {
         return $this->hasMany(AttendanceDocument::class);
     }
-    
+
     // Impersonate jogosultság
     public function canImpersonate()
     {

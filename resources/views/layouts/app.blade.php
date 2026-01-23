@@ -9,6 +9,11 @@
     @endImpersonating
 
     <flux:main>
+        <div class="flex justify-end p-4">
+            @persist('notification-bell')
+                <livewire:notification-center />
+            @endpersist
+        </div>
         {{ $slot }}
     </flux:main>
 </x-layouts::app.sidebar>

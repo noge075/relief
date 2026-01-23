@@ -26,7 +26,7 @@
         </div>
     </div>
 
-    <flux:card class="!p-0 overflow-hidden">
+    <flux:card class="p-0! overflow-hidden">
         <flux:table>
             <flux:table.columns>
                 <flux:table.column>{{ __('Date') }}</flux:table.column>
@@ -95,7 +95,7 @@
                         {{ __('Per Page') }}
                     </div>
                     <div class="w-20">
-                        <flux:select wire:model.live="perPage" class="!border-0 !shadow-none !rounded-none focus:!ring-0">
+                        <flux:select wire:model.live="perPage" class="border-0! shadow-none! rounded-none! focus:ring-0!">
                             <flux:select.option value="5">5</flux:select.option>
                             <flux:select.option value="10">10</flux:select.option>
                             <flux:select.option value="15">15</flux:select.option>
@@ -113,7 +113,7 @@
     </flux:card>
 
     <!-- Details Modal -->
-    <flux:modal wire:model="showDetailsModal" class="min-w-[600px]">
+    <flux:modal wire:model="showDetailsModal" class="min-w-150">
         <div class="space-y-6">
             <div>
                 <flux:heading size="lg">{{ __('Activity Details') }}</flux:heading>

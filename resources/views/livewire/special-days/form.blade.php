@@ -1,4 +1,4 @@
-<flux:modal wire:model="showModal" class="min-w-[500px]">
+<flux:modal wire:model="showModal" class="min-w-125">
     <div class="space-y-6">
         <div>
             <flux:heading size="lg">{{ $editingId ? __('Edit Special Day') : __('New Special Day') }}</flux:heading>

@@ -18,7 +18,7 @@ class NewLeaveRequestNotification extends Notification implements ShouldQueue
 
     public function via(object $notifiable): array
     {
-        return ['mail'];
+        return ['mail', 'database'];
     }
 
     public function toMail(object $notifiable): MailMessage
@@ -35,5 +35,25 @@ class NewLeaveRequestNotification extends Notification implements ShouldQueue
             ->line(__('Date: :start to :end', ['start' => $start, 'end' => $end]))
             ->line(__('Reason: :reason', ['reason' => $this->leaveRequest->reason ?? '-']))
             ->action(__('View Request'), route('approvals.index'));
+    }
+
+    public function toDatabase(object $notifiable): array
+    {
+        $user = $this->leaveRequest->user;
+        $type = $this->leaveRequest->type->value;
+        $start = $this->leaveRequest->start_date->format('Y-m-d');
+        $end = $this->leaveRequest->end_date->format('Y-m-d');
+
+        return [
+            'title' => __('New Leave Request'),
+            'message' => __(':name has submitted a new leave request (:type from :start to :end).', [
+                'name' => $user->name,
+                'type' => __(ucfirst($type)),
+                'start' => $start,
+                'end' => $end,
+            ]),
+            'url' => route('approvals.index'),
+            'request_id' => $this->leaveRequest->id,
+        ];
     }
 }

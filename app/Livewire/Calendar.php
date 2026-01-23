@@ -256,6 +256,17 @@ class Calendar extends Component
         }
     }
     
+    #[Computed]
+    public function canDelete()
+    {
+        if (!$this->editingId) {
+            return false;
+        }
+        
+        $request = $this->leaveRequestRepository->find($this->editingId);
+        return $request && $request->status === LeaveStatus::PENDING;
+    }
+    
     #[On('leave-request-updated')]
     public function refresh()
     {

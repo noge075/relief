@@ -32,9 +32,13 @@ class StatusBoardService
                 $q->where('manager_id', $id);
             })
             ->when($filters['search'] ?? null, function ($q, $search) {
-                $q->where('name', 'like', '%' . $search . '%');
+                $q->where(function ($query) use ($search) {
+                    $query->where('first_name', 'like', '%' . $search . '%')
+                          ->orWhere('last_name', 'like', '%' . $search . '%');
+                });
             })
-            ->orderBy('name')
+            ->orderBy('last_name')
+            ->orderBy('first_name')
             ->get();
 
         // 2. Ünnepnapok és munkanapok

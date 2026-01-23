@@ -4,9 +4,12 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class AttendanceLog extends Model
 {
+    use SoftDeletes;
+
     protected $fillable = [
         'user_id', 
         'date', 
@@ -20,6 +23,7 @@ class AttendanceLog extends Model
         'date' => 'date',
         'check_in' => 'datetime',
         'check_out' => 'datetime',
+        'worked_hours' => 'float'
     ];
 
     public function user(): BelongsTo

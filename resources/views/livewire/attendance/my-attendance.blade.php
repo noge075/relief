@@ -30,14 +30,14 @@
                     <div class="text-2xl font-bold text-zinc-900 dark:text-white mb-4">
                         {{ __('Checked in at:') }} {{ $currentLog->check_in->format('H:i') }}
                     </div>
-                    <flux:button wire:click="checkOut" variant="danger" class="min-w-[200px] h-12 text-lg" icon="arrow-right-start-on-rectangle">
+                    <flux:button wire:click="checkOut" variant="danger" class="min-w-50 h-12 text-lg" icon="arrow-right-start-on-rectangle">
                         {{ __('Check Out') }}
                     </flux:button>
                 @else
                     <div class="text-2xl font-bold text-zinc-900 dark:text-white mb-4">
                         {{ __('Not checked in') }}
                     </div>
-                    <flux:button wire:click="checkIn" variant="primary" class="min-w-[200px] h-12 text-lg" icon="arrow-right-end-on-rectangle">
+                    <flux:button wire:click="checkIn" variant="primary" class="min-w-50 h-12 text-lg" icon="arrow-right-end-on-rectangle">
                         {{ __('Check In') }}
                     </flux:button>
                 @endif
@@ -45,7 +45,7 @@
         </flux:card>
     @endif
 
-    <flux:card class="!p-0 overflow-hidden">
+    <flux:card class="p-0! overflow-hidden">
         <flux:table>
             <flux:table.columns>
                 <flux:table.column>{{ __('Date') }}</flux:table.column>
@@ -111,29 +111,5 @@
         </flux:table>
     </flux:card>
 
-    <!-- Edit Modal -->
-    <flux:modal wire:model="showEditModal" class="min-w-[400px]">
-        <div class="space-y-6">
-            <div>
-                <flux:heading size="lg">{{ __('Edit Attendance') }}</flux:heading>
-                <flux:subheading>{{ $editingDate ? \Carbon\Carbon::parse($editingDate)->translatedFormat('Y. F d.') : '' }}</flux:subheading>
-            </div>
-
-            <div class="grid gap-4">
-                <div class="grid grid-cols-2 gap-4">
-                    <flux:input wire:model="editingCheckIn" type="time" label="{{ __('Check In') }}" />
-                    <flux:input wire:model="editingCheckOut" type="time" label="{{ __('Check Out') }}" />
-                </div>
-
-                <div class="text-sm text-zinc-500">
-                    {{ __('Worked hours will be calculated automatically.') }}
-                </div>
-            </div>
-
-            <div class="flex justify-end gap-2">
-                <flux:button wire:click="$set('showEditModal', false)" variant="ghost">{{ __('Cancel') }}</flux:button>
-                <flux:button wire:click="saveLog" variant="primary">{{ __('Save') }}</flux:button>
-            </div>
-        </div>
-    </flux:modal>
+    @include('livewire.attendance.edit-modal')
 </div>

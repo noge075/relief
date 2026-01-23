@@ -93,7 +93,6 @@ class LeaveRequestService
             $warnings[] = $deptWarning;
         }
 
-        // Mentés
         $data['user_id'] = $user->id;
         $data['status'] = LeaveStatus::PENDING->value;
         $data['days_count'] = $daysCount;
@@ -105,15 +104,13 @@ class LeaveRequestService
 
         $request = $this->leaveRequestRepository->create($data);
 
-        // Értesítés a Managernek vagy HR/Adminnak
         if ($user->manager) {
             Log::info('Sending NewLeaveRequestNotification to manager: ' . $user->manager->email);
             $user->manager->notify(new NewLeaveRequestNotification($request));
         } else {
-            // Ha nincs manager, értesítsük a HR-t és a Super Admint
             Log::warning('User ' . $user->email . ' has no manager assigned. Notifying HR/Super Admins.');
             $recipients = User::role([RoleType::HR->value, RoleType::SUPER_ADMIN->value])
-                                ->where('id', '!=', $user->id) // Ne értesítse saját magát, ha ő is HR/Admin
+                                ->where('id', '!=', $user->id)
                                 ->get();
             Notification::send($recipients, new NewLeaveRequestNotification($request));
         }
@@ -291,8 +288,8 @@ class LeaveRequestService
         
         $this->validateMonthlyClosure($request->start_date);
         
-        if ($request->status === LeaveStatus::APPROVED) {
-            // Egyszerűsítve: törölhető.
+        if ($request->status !== LeaveStatus::PENDING) {
+            throw new \Exception(__('Only pending requests can be deleted.'));
         }
         
         $this->leaveRequestRepository->delete($id);

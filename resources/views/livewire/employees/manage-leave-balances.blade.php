@@ -31,7 +31,7 @@
         </div>
     </div>
 
-    <flux:card class="!p-0 overflow-hidden">
+    <flux:card class="p-0! overflow-hidden">
         <flux:table>
             <flux:table.columns>
                 <flux:table.column sortable :sorted="$sortCol === 'name'" :direction="$sortAsc ? 'asc' : 'desc'" wire:click="sortBy('name')">{{ __('Name') }}</flux:table.column>
@@ -56,13 +56,13 @@
                         </flux:table.cell>
                         <flux:table.cell>{{ $balance->year }}</flux:table.cell>
                         <flux:table.cell>
-                            <flux:badge color="zinc">{{ $balance->allowance }}</flux:badge>
+                            <flux:badge color="zinc">{{ $balance->allowance . ' ' . __('day') }}</flux:badge>
                         </flux:table.cell>
                         <flux:table.cell>
-                            <flux:badge color="yellow">{{ $balance->used }}</flux:badge>
+                            <flux:badge color="yellow">{{ $balance->used . ' ' . __('day') }}</flux:badge>
                         </flux:table.cell>
                         <flux:table.cell>
-                            <flux:badge color="green">{{ $balance->allowance - $balance->used }}</flux:badge>
+                            <flux:badge color="green">{{ $balance->allowance - $balance->used  . ' ' . __('day') }}</flux:badge>
                         </flux:table.cell>
                         <flux:table.cell>
                             <flux:dropdown>
@@ -92,7 +92,7 @@
                         {{ __('Per Page') }}
                     </div>
                     <div class="w-20">
-                        <flux:select wire:model.live="perPage" class="!border-0 !shadow-none !rounded-none focus:!ring-0">
+                        <flux:select wire:model.live="perPage" class="border-0! shadow-none! rounded-none! focus:ring-0!">
                             <flux:select.option value="5">5</flux:select.option>
                             <flux:select.option value="10">10</flux:select.option>
                             <flux:select.option value="15">15</flux:select.option>

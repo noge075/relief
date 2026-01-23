@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\LeaveStatus;
 use App\Enums\LeaveType;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Spatie\Activitylog\Traits\LogsActivity;
 use Spatie\Activitylog\LogOptions;
 use Spatie\MediaLibrary\HasMedia;
@@ -12,7 +13,7 @@ use Spatie\MediaLibrary\InteractsWithMedia;
 
 class LeaveRequest extends Model implements HasMedia
 {
-    use LogsActivity, InteractsWithMedia;
+    use LogsActivity, InteractsWithMedia, SoftDeletes;
 
     protected $fillable = [
         'user_id',

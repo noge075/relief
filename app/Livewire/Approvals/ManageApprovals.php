@@ -22,7 +22,6 @@ class ManageApprovals extends Component
     public $search = '';
     public $typeFilter = '';
     public $perPage = 10;
-    
     public $showRejectModal = false;
     public $rejectingId = null;
     public $managerComment = '';
@@ -40,25 +39,37 @@ class ManageApprovals extends Component
 
     public function boot(
         LeaveRequestRepositoryInterface $leaveRequestRepository,
-        LeaveRequestService $leaveRequestService
-    ) {
+        LeaveRequestService             $leaveRequestService
+    )
+    {
         $this->leaveRequestRepository = $leaveRequestRepository;
         $this->leaveRequestService = $leaveRequestService;
     }
 
-    public function mount()
+    public function mount(): void
     {
         $this->authorize(PermissionType::APPROVE_LEAVE_REQUESTS->value);
         $this->sortCol = 'start_date';
-        
+
         $this->perPage = request()->query('per_page', 10);
     }
 
-    public function updatedSearch() { $this->resetPage(); }
-    public function updatedTypeFilter() { $this->resetPage(); }
-    public function updatedPerPage() { $this->resetPage(); }
+    public function updatedSearch(): void
+    {
+        $this->resetPage();
+    }
 
-    public function clearFilters()
+    public function updatedTypeFilter(): void
+    {
+        $this->resetPage();
+    }
+
+    public function updatedPerPage(): void
+    {
+        $this->resetPage();
+    }
+
+    public function clearFilters(): void
     {
         $this->search = '';
         $this->typeFilter = '';
@@ -66,10 +77,10 @@ class ManageApprovals extends Component
         $this->resetPage();
     }
 
-    public function approve($id)
+    public function approve($id): void
     {
         $this->authorize(PermissionType::APPROVE_LEAVE_REQUESTS->value);
-        
+
         try {
             $this->leaveRequestService->approveRequest($id, auth()->user());
             Flux::toast(__('Request approved successfully.'), variant: 'success');
@@ -78,7 +89,7 @@ class ManageApprovals extends Component
         }
     }
 
-    public function openRejectModal($id)
+    public function openRejectModal($id): void
     {
         $this->authorize(PermissionType::APPROVE_LEAVE_REQUESTS->value);
         $this->rejectingId = $id;
@@ -86,10 +97,10 @@ class ManageApprovals extends Component
         $this->showRejectModal = true;
     }
 
-    public function reject()
+    public function reject(): void
     {
         $this->authorize(PermissionType::APPROVE_LEAVE_REQUESTS->value);
-        
+
         $this->validate([
             'managerComment' => 'required|string|max:255',
         ]);
@@ -112,12 +123,12 @@ class ManageApprovals extends Component
 
         $requests = $this->leaveRequestRepository->getPendingRequests(
             auth()->user()->can('view all leave requests') ? null : auth()->id(),
-            (int) $this->perPage,
+            (int)$this->perPage,
             $filters,
             $this->sortCol,
             $this->sortAsc
         );
-        
+
         $requests->appends([
             'search' => $this->search,
             'typeFilter' => $this->typeFilter,

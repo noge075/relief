@@ -32,6 +32,34 @@
 
     <div class="space-y-6">
         <div>
+            <flux:heading size="md">{{ __('Profile Picture') }}</flux:heading>
+            <flux:subheading>{{ __('Upload a new profile picture.') }}</flux:subheading>
+        </div>
+
+        <div class="flex items-center space-x-4">
+            @if (auth()->user()->getFirstMedia('avatar'))
+                <img src="{{ auth()->user()->getFirstMediaUrl('avatar') }}" alt="Avatar" class="h-20 w-20 rounded-full">
+            @else
+                <div class="h-20 w-20 rounded-full bg-zinc-200 dark:bg-zinc-700 flex items-center justify-center">
+                    <span class="text-2xl font-bold text-zinc-500">{{ auth()->user()->initials() }}</span>
+                </div>
+            @endif
+            <div>
+                <flux:input type="file" wire:model="avatar" label="{{ __('Upload New Picture') }}" accept="image/*" />
+                <div class="mt-2 flex space-x-2">
+                    <flux:button wire:click="saveAvatar" variant="primary" :disabled="!$avatar">{{ __('Save Picture') }}</flux:button>
+                    @if (auth()->user()->getFirstMedia('avatar'))
+                        <flux:button wire:click="deleteAvatar" variant="danger" wire:confirm="{{ __('Are you sure you want to delete your profile picture?') }}">{{ __('Delete Picture') }}</flux:button>
+                    @endif
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <flux:separator class="my-8" />
+
+    <div class="space-y-6">
+        <div>
             <flux:heading size="md">{{ __('Signature') }}</flux:heading>
             <flux:subheading>{{ __('Upload or draw your signature for documents.') }}</flux:subheading>
         </div>

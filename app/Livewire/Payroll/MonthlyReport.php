@@ -24,18 +24,18 @@ class MonthlyReport extends Component
     #[Url]
     public $month;
     #[Url(except: 5)]
-    public $perPage = 5; // Kisebb alapértelmezett érték az exportokhoz
-    
+    public $perPage = 5;
+
     public $closure;
 
     protected PayrollService $payrollService;
 
-    public function boot(PayrollService $payrollService)
+    public function boot(PayrollService $payrollService): void
     {
         $this->payrollService = $payrollService;
     }
 
-    public function mount()
+    public function mount(): void
     {
         $this->authorize(PermissionType::VIEW_PAYROLL_DATA->value);
         $this->year = request()->query('year', Carbon::now()->year);
@@ -43,12 +43,25 @@ class MonthlyReport extends Component
         $this->perPage = request()->query('perPage', 5);
         $this->loadClosureStatus();
     }
-    
-    public function updatedYear() { $this->loadClosureStatus(); $this->resetPage(); }
-    public function updatedMonth() { $this->loadClosureStatus(); $this->resetPage(); }
-    public function updatedPerPage() { $this->resetPage(); }
 
-    public function loadClosureStatus()
+    public function updatedYear(): void
+    {
+        $this->loadClosureStatus();
+        $this->resetPage();
+    }
+
+    public function updatedMonth(): void
+    {
+        $this->loadClosureStatus();
+        $this->resetPage();
+    }
+
+    public function updatedPerPage(): void
+    {
+        $this->resetPage();
+    }
+
+    public function loadClosureStatus(): void
     {
         $this->closure = $this->payrollService->getClosureStatus($this->year, $this->month);
     }
@@ -56,42 +69,42 @@ class MonthlyReport extends Component
     public function export()
     {
         $this->authorize(PermissionType::VIEW_PAYROLL_DATA->value);
-        
+
         $filename = 'payroll_report_' . $this->year . '_' . str_pad($this->month, 2, '0', STR_PAD_LEFT) . '.xlsx';
-        
+
         $fileContent = Excel::raw(new MonthlyPayrollExport($this->year, $this->month), \Maatwebsite\Excel\Excel::XLSX);
-        
+
         $this->payrollService->storeExport($this->year, $this->month, auth()->user(), $fileContent, $filename);
-        
+
         return response()->streamDownload(function () use ($fileContent) {
             echo $fileContent;
         }, $filename);
     }
-    
+
     public function closeMonth(): void
     {
         $this->authorize(PermissionType::MANAGE_MONTHLY_CLOSURES->value);
-        
+
         $this->payrollService->closeMonth($this->year, $this->month, auth()->user());
         $this->loadClosureStatus();
-        
+
         Flux::toast(__('Month closed successfully.'), variant: 'success');
     }
-    
+
     public function reopenMonth(): void
     {
         $this->authorize(PermissionType::MANAGE_MONTHLY_CLOSURES->value);
-        
+
         $this->payrollService->reopenMonth($this->year, $this->month, auth()->user());
         $this->loadClosureStatus();
-        
+
         Flux::toast(__('Month reopened successfully.'), variant: 'success');
     }
 
     public function render()
     {
         $report = $this->payrollService->getMonthlyReportData($this->year, $this->month);
-        $exports = $this->payrollService->getExports($this->year, $this->month, (int) $this->perPage, $this->getPage());
+        $exports = $this->payrollService->getExports($this->year, $this->month, (int)$this->perPage, $this->getPage());
 
         return view('livewire.payroll.monthly-report', [
             'report' => $report,

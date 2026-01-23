@@ -12,6 +12,7 @@ enum PermissionType: string
     case DELETE_USERS = 'delete users';
     case RESTORE_USERS = 'restore users';
     case VIEW_ANY_USER_PROFILE = 'view any user profile';
+    case MANAGE_USER_DOCUMENTS = 'manage user documents';
 
     // Department Management
     case MANAGE_DEPARTMENTS = 'manage departments';

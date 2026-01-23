@@ -24,19 +24,15 @@ class ManageLeaveBalances extends Component
     public $yearFilter;
     public $departmentFilter = null;
     public $perPage = 10;
-    
     public $showModal = false;
     public $editingBalanceId = null;
-    
-    // Form
     public $userId;
-    public $userName; // Csak megjelenítésre szerkesztéskor
+    public $userName;
     public $year;
     public $type = LeaveType::VACATION->value;
     public $allowance;
     public $used;
-
-    public $users = []; // Dropdownhoz
+    public $users = [];
 
     protected LeaveBalanceRepositoryInterface $leaveBalanceRepository;
     protected UserRepositoryInterface $userRepository;
@@ -52,27 +48,43 @@ class ManageLeaveBalances extends Component
 
     public function boot(
         LeaveBalanceRepositoryInterface $leaveBalanceRepository,
-        UserRepositoryInterface $userRepository
-    ) {
+        UserRepositoryInterface         $userRepository
+    )
+    {
         $this->leaveBalanceRepository = $leaveBalanceRepository;
         $this->userRepository = $userRepository;
     }
 
-    public function mount()
+    public function mount(): void
     {
         $this->authorize(PermissionType::VIEW_ALL_LEAVE_BALANCES->value);
         $this->yearFilter = Carbon::now()->year;
         $this->sortCol = 'name';
-        
+
         $this->perPage = request()->query('per_page', 10);
     }
 
-    public function updatedSearch() { $this->resetPage(); }
-    public function updatedYearFilter() { $this->resetPage(); }
-    public function updatedDepartmentFilter() { $this->resetPage(); }
-    public function updatedPerPage() { $this->resetPage(); }
+    public function updatedSearch(): void
+    {
+        $this->resetPage();
+    }
 
-    public function clearFilters()
+    public function updatedYearFilter(): void
+    {
+        $this->resetPage();
+    }
+
+    public function updatedDepartmentFilter(): void
+    {
+        $this->resetPage();
+    }
+
+    public function updatedPerPage(): void
+    {
+        $this->resetPage();
+    }
+
+    public function clearFilters(): void
     {
         $this->search = '';
         $this->departmentFilter = null;
@@ -81,28 +93,28 @@ class ManageLeaveBalances extends Component
         $this->resetPage();
     }
 
-    public function create()
+    public function create(): void
     {
         $this->authorize(PermissionType::ADJUST_LEAVE_BALANCES->value);
         $this->resetForm();
         $this->year = $this->yearFilter;
         $this->users = $this->userRepository->getUsersWithoutLeaveBalance($this->year);
-        
+
         if ($this->users->isNotEmpty()) {
             $this->userId = $this->users->first()->id;
         }
-        
+
         $this->showModal = true;
     }
 
-    public function edit($id)
+    public function edit($id): void
     {
         $this->authorize(PermissionType::ADJUST_LEAVE_BALANCES->value);
         $this->resetForm();
         $this->editingBalanceId = $id;
-        
+
         $balance = $this->leaveBalanceRepository->find($id);
-        
+
         $this->userId = $balance->user_id;
         $this->userName = $balance->user->name;
         $this->year = $balance->year;
@@ -113,7 +125,7 @@ class ManageLeaveBalances extends Component
         $this->showModal = true;
     }
 
-    public function save()
+    public function save(): void
     {
         $this->authorize(PermissionType::ADJUST_LEAVE_BALANCES->value);
 
@@ -153,7 +165,7 @@ class ManageLeaveBalances extends Component
         $this->showModal = false;
     }
 
-    private function resetForm()
+    private function resetForm(): void
     {
         $this->reset(['userId', 'userName', 'allowance', 'used', 'editingBalanceId']);
         $this->year = $this->yearFilter;
@@ -164,7 +176,7 @@ class ManageLeaveBalances extends Component
         $balances = $this->leaveBalanceRepository->getPaginated(
             $this->yearFilter,
             ['search' => $this->search, 'department_id' => $this->departmentFilter],
-            (int) $this->perPage,
+            (int)$this->perPage,
             $this->sortCol,
             $this->sortAsc
         );

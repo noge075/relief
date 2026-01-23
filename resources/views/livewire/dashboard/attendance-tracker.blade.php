@@ -19,11 +19,11 @@
                     {{ $currentLog->check_in->format('H:i') }}
                 </div>
             </div>
-            <flux:button wire:click="checkOut" variant="danger" class="w-full md:w-auto min-w-[200px] h-12 text-lg">
+            <flux:button wire:click="checkOut" variant="danger" class="w-full md:w-auto min-w-50 h-12 text-lg">
                 {{ __('Check Out') }}
             </flux:button>
         @else
-            <flux:button wire:click="checkIn" variant="primary" class="w-full md:w-auto min-w-[200px] h-12 text-lg">
+            <flux:button wire:click="checkIn" variant="primary" class="w-full md:w-auto min-w-50 h-12 text-lg">
                 {{ __('Check In') }}
             </flux:button>
         @endif

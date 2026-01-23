@@ -74,7 +74,8 @@ class ManageAuditLogs extends Component
 
         if ($this->causerFilter) {
             $query->whereHas('causer', function ($q) {
-                $q->where('name', 'like', '%' . $this->causerFilter . '%');
+                $q->where('first_name', 'like', '%' . $this->causerFilter . '%')
+                    ->orWhere('last_name', 'like', '%' . $this->causerFilter . '%');
             });
         }
         

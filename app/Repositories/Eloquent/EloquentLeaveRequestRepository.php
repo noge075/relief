@@ -63,7 +63,10 @@ class EloquentLeaveRequestRepository extends BaseRepository implements LeaveRequ
         if (!empty($filters['search'])) {
             $search = $filters['search'];
             $query->whereHas('user', function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%");
+                $q->where(function ($query) use ($search) {
+                    $query->where('first_name', 'like', "%{$search}%")
+                          ->orWhere('last_name', 'like', "%{$search}%");
+                });
             });
         }
 
@@ -73,7 +76,8 @@ class EloquentLeaveRequestRepository extends BaseRepository implements LeaveRequ
 
         if ($sortCol === 'name') {
             $query->join('users', 'leave_requests.user_id', '=', 'users.id')
-                ->orderBy('users.name', $sortAsc ? 'asc' : 'desc')
+                ->orderBy('users.last_name', $sortAsc ? 'asc' : 'desc')
+                ->orderBy('users.first_name', $sortAsc ? 'asc' : 'desc')
                 ->select('leave_requests.*');
         } else {
             $query->orderBy($sortCol, $sortAsc ? 'asc' : 'desc');

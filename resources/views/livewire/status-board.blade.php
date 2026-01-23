@@ -67,13 +67,13 @@
         </div>
     </div>
 
-    <div class="overflow-auto border border-zinc-200 dark:border-zinc-700 rounded-xl max-h-[600px]">
+    <div class="overflow-auto border border-zinc-200 dark:border-zinc-700 rounded-xl max-h-150">
         <table class="w-full text-sm text-left border-collapse">
             <thead class="bg-zinc-50 dark:bg-zinc-800/90 text-xs uppercase font-medium text-zinc-500 sticky top-0 z-20 backdrop-blur-sm">
                 <tr>
                     <th class="px-4 py-3 sticky left-0 top-0 bg-zinc-50 dark:bg-zinc-800 z-30 w-48 border-b border-r border-zinc-200 dark:border-zinc-700 shadow-sm">{{ __('Employee') }}</th>
                     @foreach($matrix[0]['days'] ?? [] as $day)
-                        <th class="px-2 py-3 text-center min-w-[40px] border-b border-zinc-200 dark:border-zinc-700 {{ $day['status'] === 'off' ? 'bg-zinc-100/50 dark:bg-zinc-800/80' : '' }}">
+                        <th class="px-2 py-3 text-center min-w-10 border-b border-zinc-200 dark:border-zinc-700 {{ $day['status'] === 'off' ? 'bg-zinc-100/50 dark:bg-zinc-800/80' : '' }}">
                             <div class="flex flex-col">
                                 <span>{{ $day['day_name'] }}</span>
                                 <span class="text-lg font-bold">{{ $day['day_number'] }}</span>
@@ -88,7 +88,7 @@
                         <td class="px-4 py-3 font-medium sticky left-0 bg-white dark:bg-zinc-900 z-10 border-r border-zinc-100 dark:border-zinc-800 shadow-sm">
                             <div class="flex items-center gap-2">
                                 <flux:avatar src="{{ $row['user']->profile_photo_url ?? '' }}" name="{{ $row['user']->name }}" size="xs" />
-                                <span class="truncate max-w-[120px]">{{ $row['user']->name }}</span>
+                                <span class="truncate max-w-30">{{ $row['user']->name }}</span>
                             </div>
                         </td>
                         @foreach($row['days'] as $day)
@@ -109,11 +109,9 @@
                                     'off' => null,
                                     default => null
                                 };
-                                // Ha a meta üres string, akkor használjuk a státusz nevét
                                 $tooltip = $day['meta'] ?: ($day['status'] === 'present' ? __('Present') : __($day['status']));
                                 if ($day['is_pending'] ?? false) {
                                     $tooltip .= ' (' . __('Pending') . ')';
-                                    // Pending stílus felülírása (halványabb/szaggatott)
                                     $colorClass = str_replace(['bg-yellow-100', 'bg-red-100', 'bg-blue-100'], ['bg-yellow-50 border-dashed border-yellow-300', 'bg-red-50 border-dashed border-red-300', 'bg-blue-50 border-dashed border-blue-300'], $colorClass);
                                     $colorClass .= ' border';
                                 }

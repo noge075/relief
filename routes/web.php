@@ -4,8 +4,10 @@ use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\ImpersonateController;
 use App\Livewire\Approvals\ManageApprovals;
 use App\Livewire\Attendance\MyAttendance;
+use App\Livewire\CompanyDirectory;
 use App\Livewire\Employees\ManageEmployees;
 use App\Livewire\Employees\ManageLeaveBalances;
+use App\Livewire\MyDocuments;
 use App\Livewire\MyRequests;
 use App\Livewire\OrganizationChart;
 use App\Livewire\Payroll\MonthlyReport;
@@ -27,6 +29,8 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/attendance/download-pdf/{year}/{month}', [AttendanceController::class, 'downloadPdf'])->name('attendance.download-pdf');
     
     Route::get('/my-requests', MyRequests::class)->name('my-requests.index');
+    Route::get('/my-documents', MyDocuments::class)->name('my-documents.index');
+    Route::get('/company-directory', CompanyDirectory::class)->name('company-directory.index');
     Route::get('/status-board', StatusBoard::class)->name('status-board');
     Route::get('/employees', ManageEmployees::class)->name('employees.index');
     Route::get('/employees/balances', ManageLeaveBalances::class)->name('employees.balances');
@@ -34,7 +38,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/organization', OrganizationChart::class)->name('organization.index');
     Route::get('/payroll', MonthlyReport::class)->name('payroll.report');
     Route::get('/work-schedules', ManageWorkSchedules::class)->name('work-schedules.index');
-    Route::get('/departments', ManageDepartments::class)->name('departments.index'); // Új
+    Route::get('/departments', ManageDepartments::class)->name('departments.index');
     
     // Settings routes protected by permission
     Route::middleware(['can:manage settings'])->group(function () {

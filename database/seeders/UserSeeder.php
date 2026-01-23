@@ -88,10 +88,5 @@ class UserSeeder extends Seeder
             'hired_at' => now()->subYears(2),
         ]);
         $payroll->assignRole(RoleType::PAYROLL->value);
-
-        // További teszt userek
-        User::factory(10)->create()->each(function ($user) {
-            $user->assignRole(RoleType::EMPLOYEE->value);
-        });
     }
 }

@@ -45,7 +45,7 @@
         </div>
     </div>
 
-    <flux:card class="!p-0 overflow-hidden">
+    <flux:card class="p-0! overflow-hidden">
         <flux:table>
             <flux:table.columns>
                 <flux:table.column>{{ __('Name') }}</flux:table.column>
@@ -62,11 +62,11 @@
                     <flux:table.row :key="$row['user_id']">
                         <flux:table.cell class="font-medium">{{ $row['name'] }}</flux:table.cell>
                         <flux:table.cell>{{ $row['department'] }}</flux:table.cell>
-                        <flux:table.cell>{{ $row['total_workdays'] }}</flux:table.cell>
-                        <flux:table.cell>{{ $row['worked_days'] }}</flux:table.cell>
-                        <flux:table.cell>{{ $row['vacation_days'] }}</flux:table.cell>
-                        <flux:table.cell>{{ $row['sick_days'] }}</flux:table.cell>
-                        <flux:table.cell>{{ $row['home_office_days'] }}</flux:table.cell>
+                        <flux:table.cell>{{ $row['total_workdays'] . ' ' . __('day') }}</flux:table.cell>
+                        <flux:table.cell>{{ $row['worked_days'] . ' ' . __('day') }}</flux:table.cell>
+                        <flux:table.cell>{{ $row['vacation_days'] . ' ' . __('day') }}</flux:table.cell>
+                        <flux:table.cell>{{ $row['sick_days'] . ' ' . __('day') }}</flux:table.cell>
+                        <flux:table.cell>{{ $row['home_office_days'] . ' ' . __('day') }}</flux:table.cell>
                     </flux:table.row>
                 @endforeach
             </flux:table.rows>

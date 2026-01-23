@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Enums\LeaveStatus;
 use App\Enums\LeaveType;
 use App\Enums\RoleType;
+use App\Models\LeaveRequest;
 use App\Models\MonthlyClosure;
 use App\Models\User;
 use App\Notifications\MonthlyClosureNotification;
@@ -31,7 +32,11 @@ class PayrollService
         $end = $start->copy()->endOfMonth();
 
         // 1. Dolgozók
-        $users = User::with(['department', 'workSchedule'])->where('is_active', true)->orderBy('name')->get();
+        $users = User::with(['department', 'workSchedule'])
+            ->where('is_active', true)
+            ->orderBy('last_name')
+            ->orderBy('first_name')
+            ->get();
 
         // 2. Munkanapok száma a hónapban
         $holidays = $this->holidayService->getHolidaysInRange($start, $end);
@@ -52,7 +57,7 @@ class PayrollService
         }
 
         // 3. Távollétek
-        $leaveRequests = \App\Models\LeaveRequest::whereIn('user_id', $users->pluck('id'))
+        $leaveRequests = LeaveRequest::whereIn('user_id', $users->pluck('id'))
             ->where('status', LeaveStatus::APPROVED->value)
             ->where(function ($query) use ($start, $end) {
                 $query->where('start_date', '<=', $end->format('Y-m-d'))
@@ -95,7 +100,7 @@ class PayrollService
             $report->push([
                 'user_id' => $user->id,
                 'employee_id' => $user->name . ' (ID: ' . $user->id . ')',
-                'name' => $user->name, // Megtartjuk a külön nevet is a nézethez
+                'name' => $user->name,
                 'department' => $user->department->name ?? '-',
                 'group' => $user->workSchedule->name ?? '-',
                 'month' => $start->format('Y-m'),
@@ -119,7 +124,7 @@ class PayrollService
         $holidays = $this->holidayService->getHolidaysInRange($start, $end);
         $extraWorkdays = $this->holidayService->getExtraWorkdaysInRange($start, $end);
 
-        $leaveRequests = \App\Models\LeaveRequest::whereIn('user_id', $users->pluck('id'))
+        $leaveRequests = LeaveRequest::whereIn('user_id', $users->pluck('id'))
             ->where('status', LeaveStatus::APPROVED->value)
             ->where(function ($query) use ($start, $end) {
                 $query->where('start_date', '<=', $end->format('Y-m-d'))
@@ -197,8 +202,6 @@ class PayrollService
         
         return $days;
     }
-
-    // --- Monthly Closure ---
 
     public function isMonthClosed(int $year, int $month): bool
     {

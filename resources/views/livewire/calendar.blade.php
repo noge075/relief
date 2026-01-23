@@ -2,11 +2,11 @@
 
     <div class="flex flex-col md:flex-row items-center justify-between mb-4 gap-4 md:gap-0" x-data="{ open: false }">
         <div class="relative flex items-center gap-2 w-full md:w-auto justify-between md:justify-start">
-            <flux:button variant="ghost" icon-trailing="chevron-down" class="!text-xl !font-bold text-zinc-800 dark:text-zinc-100 px-2 -ml-2" @click="open = !open">
+            <flux:button variant="ghost" icon-trailing="chevron-down" class="text-xl! font-bold! text-zinc-800 dark:text-zinc-100 px-2 -ml-2" @click="open = !open">
                 {{ \Carbon\Carbon::parse($date)->translatedFormat('Y. F') }}
             </flux:button>
 
-            <div x-show="open" @click.outside="open = false" style="display: none;" class="absolute top-full left-0 mt-2 z-50 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-xl p-4 w-[300px]">
+            <div x-show="open" @click.outside="open = false" style="display: none;" class="absolute top-full left-0 mt-2 z-50 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-xl p-4 w-75">
                 <div class="flex items-center justify-between mb-4 px-2">
                     <flux:button icon="chevron-left" variant="subtle" size="sm" wire:click.stop="jumpToDate({{ $this->currentYear - 1 }}, {{ $this->currentMonth }})" />
                     <span class="font-bold text-lg text-zinc-700 dark:text-zinc-200">{{ $this->currentYear }}</span>
@@ -23,11 +23,11 @@
         </div>
 
         <div class="flex items-center gap-1 bg-zinc-100 dark:bg-zinc-800 p-1 rounded-lg shadow-sm w-full md:w-auto justify-center">
-            <flux:button icon="chevron-left" wire:click="prevMonth" variant="ghost" size="sm" class="!h-8 !w-8" />
+            <flux:button icon="chevron-left" wire:click="prevMonth" variant="ghost" size="sm" class="h-8! w-8!" />
             <div class="h-4 w-px bg-zinc-300 dark:bg-zinc-600 mx-1"></div>
             <flux:button wire:click="jumpToToday" variant="ghost" size="sm" class="text-xs font-medium px-3">{{ __('Today') }}</flux:button>
             <div class="h-4 w-px bg-zinc-300 dark:bg-zinc-600 mx-1"></div>
-            <flux:button icon="chevron-right" wire:click="nextMonth" variant="ghost" size="sm" class="!h-8 !w-8" />
+            <flux:button icon="chevron-right" wire:click="nextMonth" variant="ghost" size="sm" class="h-8! w-8!" />
         </div>
     </div>
 
@@ -63,7 +63,7 @@
                         w-full flex flex-row items-center justify-between p-4 border-b border-zinc-100 dark:border-zinc-800
 
                         /* DESKTOP STÍLUSOK (Grid cella) */
-                        md:block md:min-h-[120px] md:p-2 md:border-b-0 md:border-r
+                        md:block md:min-h-30 md:p-2 md:border-b-0 md:border-r
 
                         /* Közös */
                         relative group transition
@@ -106,7 +106,7 @@
                         </div>
                     @endif
 
-                    <div class="mt-0 md:mt-2 flex-grow md:flex-grow-0 flex justify-end md:block ml-4 md:ml-0">
+                    <div class="mt-0 md:mt-2 grow md:grow-0 flex justify-end md:block ml-4 md:ml-0">
                         @if($day['event'])
                             @php
                                 $type = $day['event']->type->value;

@@ -15,18 +15,18 @@ class Profile extends Component
     public $last_name = '';
     public $first_name = '';
     public $email = '';
-    
-    // Új mezők
     public $id_card_number = '';
     public $tax_id = '';
     public $ssn = '';
     public $address = '';
     public $phone = '';
 
-    // Signature
-    public $signature; // Uploaded file
-    public $signatureData; // Drawn signature (base64)
+    public $signature;
+    public $signatureData;
     public $currentSignature;
+
+    // Avatar
+    public $avatar;
 
     public function mount()
     {
@@ -63,6 +63,31 @@ class Profile extends Component
         $user->update($validated);
 
         Flux::toast(__('Profile updated successfully.'), variant: 'success');
+    }
+    
+    public function saveAvatar()
+    {
+        $this->validate([
+            'avatar' => 'required|image|max:1024', // 1MB
+        ]);
+
+        $user = auth()->user();
+
+        $user->addMedia($this->avatar->getRealPath())
+            ->toMediaCollection('avatar');
+
+        $this->reset('avatar');
+
+        Flux::toast(__('Profile picture saved successfully.'), variant: 'success');
+        $this->dispatch('avatar-updated');
+    }
+
+    public function deleteAvatar()
+    {
+        auth()->user()->clearMediaCollection('avatar');
+
+        Flux::toast(__('Profile picture deleted.'), variant: 'success');
+        $this->dispatch('avatar-updated');
     }
     
     public function saveSignatureUpload()

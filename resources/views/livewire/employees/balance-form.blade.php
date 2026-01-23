@@ -1,4 +1,4 @@
-<flux:modal wire:model="showModal" class="min-w-[400px]">
+<flux:modal wire:model="showModal" class="min-w-100">
     <div class="space-y-6">
         <div>
             <flux:heading size="lg">{{ $editingBalanceId ? __('Edit Balance') : __('New Balance') }}</flux:heading>

@@ -25,6 +25,14 @@
                         {{ __('My Requests') }}
                     </flux:sidebar.item>
 
+                    <flux:sidebar.item icon="document-text" :href="route('my-documents.index')" :current="request()->routeIs('my-documents.index')" wire:navigate>
+                        {{ __('My Documents') }}
+                    </flux:sidebar.item>
+
+                    <x-flux::sidebar.item icon="users" href="{{ route('company-directory.index') }}">
+                        {{ __('Company Directory') }}
+                    </x-flux::sidebar.item>
+
                     @can('view status board')
                         <flux:sidebar.item icon="table-cells" :href="route('status-board')" :current="request()->routeIs('status-board')" wire:navigate>
                             {{ __('Status Board') }}
@@ -95,75 +103,18 @@
                         @endcan
                     </flux:sidebar.group>
                 @endcan
-
-                <!-- Platform -->
-                <flux:sidebar.group :heading="__('Platform')" class="grid">
-                    <flux:sidebar.item icon="code-bracket" href="https://github.com/livewire/flux" target="_blank">{{ __('Repository') }}</flux:sidebar.item>
-                    <flux:sidebar.item icon="book-open" href="https://flux.laravel-livewire.com" target="_blank">{{ __('Documentation') }}</flux:sidebar.item>
-                    @can('viewHorizon')
-                        <flux:sidebar.item icon="server" href="/horizon" target="_blank">{{ __('Horizon') }}</flux:sidebar.item>
-                    @endcan
-                </flux:sidebar.group>
             </flux:sidebar.nav>
 
             <flux:spacer />
 
-            <x-desktop-user-menu class="hidden lg:block" :name="auth()->user()->name" />
+            @livewire('user-avatar')
         </flux:sidebar>
 
-        <!-- Mobile User Menu -->
+        <!-- Mobile Header -->
         <flux:header class="lg:hidden">
             <flux:sidebar.toggle class="lg:hidden" icon="bars-2" inset="left" />
-
             <flux:spacer />
-
-            <flux:dropdown position="top" align="end">
-                <flux:profile
-                    :initials="auth()->user()->initials()"
-                    icon-trailing="chevron-down"
-                />
-
-                <flux:menu>
-                    <flux:menu.radio.group>
-                        <div class="p-0 text-sm font-normal">
-                            <div class="flex items-center gap-2 px-1 py-1.5 text-start text-sm">
-                                <flux:avatar
-                                    :name="auth()->user()->name"
-                                    :initials="auth()->user()->initials()"
-                                />
-
-                                <div class="grid flex-1 text-start text-sm leading-tight">
-                                    <flux:heading class="truncate">{{ auth()->user()->name }}</flux:heading>
-                                    <flux:text class="truncate">{{ auth()->user()->email }}</flux:text>
-                                </div>
-                            </div>
-                        </div>
-                    </flux:menu.radio.group>
-
-                    <flux:menu.separator />
-
-                    <flux:menu.radio.group>
-                        <flux:menu.item :href="route('profile.edit')" icon="cog" wire:navigate>
-                            {{ __('Settings') }}
-                        </flux:menu.item>
-                    </flux:menu.radio.group>
-
-                    <flux:menu.separator />
-
-                    <form method="POST" action="{{ route('logout') }}" class="w-full">
-                        @csrf
-                        <flux:menu.item
-                            as="button"
-                            type="submit"
-                            icon="arrow-right-start-on-rectangle"
-                            class="w-full cursor-pointer"
-                            data-test="logout-button"
-                        >
-                            {{ __('Log Out') }}
-                        </flux:menu.item>
-                    </form>
-                </flux:menu>
-            </flux:dropdown>
+            @livewire('user-avatar')
         </flux:header>
 
         {{ $slot }}

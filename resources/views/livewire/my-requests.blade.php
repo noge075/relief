@@ -36,7 +36,7 @@
         </div>
     </div>
 
-    <flux:card class="!p-0 overflow-hidden">
+    <flux:card class="p-0! overflow-hidden">
         <flux:table>
             <flux:table.columns>
                 <flux:table.column>{{ __('Type') }}</flux:table.column>
@@ -66,7 +66,7 @@
                             @endif
                         </flux:table.cell>
                         <flux:table.cell>{{ $request->days_count }}</flux:table.cell>
-                        <flux:table.cell class="truncate max-w-[200px]" title="{{ $request->reason }}">{{ $request->reason }}</flux:table.cell>
+                        <flux:table.cell class="truncate max-w-50" title="{{ $request->reason }}">{{ $request->reason }}</flux:table.cell>
                         <flux:table.cell>
                             @php
                                 $status = $request->status->value;
@@ -75,7 +75,7 @@
                             @endphp
                             <flux:badge :color="$statusColor" size="sm">{{ $statusLabel }}</flux:badge>
                         </flux:table.cell>
-                        <flux:table.cell class="truncate max-w-[200px]" title="{{ $request->manager_comment }}">
+                        <flux:table.cell class="truncate max-w-50" title="{{ $request->manager_comment }}">
                             @if($request->manager_comment)
                                 <span class="text-zinc-600 dark:text-zinc-400">{{ $request->manager_comment }}</span>
                             @else
@@ -83,7 +83,17 @@
                             @endif
                         </flux:table.cell>
                         <flux:table.cell>
-                            <flux:button variant="ghost" size="sm" icon="eye" wire:click="openDetails({{ $request->id }})">{{ __('Details') }}</flux:button>
+                            <flux:dropdown>
+                                <flux:button variant="ghost" size="sm" icon="ellipsis-horizontal" />
+                                <flux:menu>
+                                    <flux:menu.item icon="eye" wire:click="openDetails({{ $request->id }})">{{ __('Details') }}</flux:menu.item>
+
+                                    @if($request->status === \App\Enums\LeaveStatus::PENDING)
+                                        <flux:menu.separator />
+                                        <flux:menu.item icon="trash" variant="danger" wire:click="deleteRequest({{ $request->id }})" wire:confirm="{{ __('Are you sure you want to delete this request?') }}">{{ __('Delete') }}</flux:menu.item>
+                                    @endif
+                                </flux:menu>
+                            </flux:dropdown>
                         </flux:table.cell>
                     </flux:table.row>
                 @endforeach
@@ -105,7 +115,7 @@
                         {{ __('Per Page') }}
                     </div>
                     <div class="w-20">
-                        <flux:select wire:model.live="perPage" class="!border-0 !shadow-none !rounded-none focus:!ring-0">
+                        <flux:select wire:model.live="perPage" class="border-0! shadow-none! rounded-none! focus:ring-0!">
                             <flux:select.option value="5">5</flux:select.option>
                             <flux:select.option value="10">10</flux:select.option>
                             <flux:select.option value="15">15</flux:select.option>
@@ -123,13 +133,13 @@
     </flux:card>
 
     <!-- Details Modal -->
-    <flux:modal wire:model="showDetailsModal" class="min-w-[600px]">
+    <flux:modal wire:model="showDetailsModal" class="min-w-150">
         <div class="space-y-6">
             <div>
                 <flux:heading size="lg">{{ __('Request Details') }}</flux:heading>
                 <flux:subheading>
                     @if($selectedRequest)
-                        {{ ucfirst($selectedRequest->type->value) }} - {{ $selectedRequest->start_date->format('Y.m.d') }}
+                        {{ __(ucfirst($selectedRequest->type->value)) }} - {{ $selectedRequest->start_date->format('Y.m.d') }}
                     @endif
                 </flux:subheading>
             </div>
@@ -169,12 +179,14 @@
                                 @foreach($selectedRequest->getMedia('documents') as $media)
                                     <div class="flex justify-between items-center p-2 bg-zinc-50 dark:bg-zinc-800 rounded border border-zinc-200 dark:border-zinc-700">
                                         <div class="flex items-center gap-2 overflow-hidden">
-                                            <flux:icon name="paper-clip" class="text-zinc-400 flex-shrink-0" />
+                                            <flux:icon name="paper-clip" class="text-zinc-400 shrink-0" />
                                             <span class="text-sm truncate">{{ $media->file_name }}</span>
                                         </div>
                                         <div class="flex gap-2">
                                             <flux:button variant="ghost" size="xs" icon="arrow-down-tray" href="{{ $media->getUrl() }}" target="_blank" />
-                                            <flux:button variant="ghost" size="xs" icon="trash" class="text-red-500 hover:text-red-600" wire:click="deleteDocument({{ $media->id }})" wire:confirm="{{ __('Are you sure?') }}" />
+                                            @if($selectedRequest->status === \App\Enums\LeaveStatus::PENDING)
+                                                <flux:button variant="ghost" size="xs" icon="trash" class="text-red-500 hover:text-red-600" wire:click="deleteDocument({{ $media->id }})" wire:confirm="{{ __('Are you sure?') }}" />
+                                            @endif
                                         </div>
                                     </div>
                                 @endforeach
@@ -183,9 +195,6 @@
                             <p class="text-sm text-zinc-500 mb-4">{{ __('No documents attached.') }}</p>
                         @endif
 
-                        <!-- Upload (csak ha Sick Leave, vagy mindig?) -->
-                        <!-- A felhasználó kérése: "Ezt utolóag is lehetne... amikor leadja a betegszabit még nem tud feltölteni" -->
-                        <!-- Tehát mindig engedjük, vagy csak ha Sick Leave. -->
                         @if($selectedRequest->type === \App\Enums\LeaveType::SICK)
                             <div class="space-y-2">
                                 <flux:input type="file" wire:model="upload" label="{{ __('Upload Document') }}" />
@@ -198,7 +207,12 @@
                 </div>
             @endif
 
-            <div class="flex justify-end">
+            <div class="flex justify-between">
+                @if($selectedRequest && $selectedRequest->status === \App\Enums\LeaveStatus::PENDING)
+                    <flux:button variant="danger" wire:click="deleteRequest({{ $selectedRequest->id }})" wire:confirm="{{ __('Are you sure you want to delete this request?') }}">{{ __('Delete Request') }}</flux:button>
+                @else
+                    <div></div>
+                @endif
                 <flux:button wire:click="$set('showDetailsModal', false)">{{ __('Close') }}</flux:button>
             </div>
         </div>

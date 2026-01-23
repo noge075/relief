@@ -24,7 +24,7 @@
         </div>
     </div>
 
-    <flux:card class="!p-0 overflow-hidden">
+    <flux:card class="p-0! overflow-hidden">
         <flux:table>
             <flux:table.columns>
                 <flux:table.column sortable :sorted="$sortCol === 'name'" :direction="$sortAsc ? 'asc' : 'desc'" wire:click="sortBy('name')">{{ __('Employee') }}</flux:table.column>
@@ -61,8 +61,8 @@
                                 - {{ $request->end_date->format('Y.m.d') }}
                             @endif
                         </flux:table.cell>
-                        <flux:table.cell>{{ $request->days_count }}</flux:table.cell>
-                        <flux:table.cell class="truncate max-w-[200px]">
+                        <flux:table.cell>{{ $request->days_count . ' ' . __('day') }}</flux:table.cell>
+                        <flux:table.cell class="truncate max-w-50">
                             {{ $request->reason }}
                             @if($request->has_warning)
                                 <flux:tooltip content="{{ $request->warning_message }}">
@@ -100,7 +100,7 @@
                         {{ __('Per Page') }}
                     </div>
                     <div class="w-20">
-                        <flux:select wire:model.live="perPage" class="!border-0 !shadow-none !rounded-none focus:!ring-0">
+                        <flux:select wire:model.live="perPage" class="border-0! shadow-none! rounded-none! focus:ring-0!">
                             <flux:select.option value="5">5</flux:select.option>
                             <flux:select.option value="10">10</flux:select.option>
                             <flux:select.option value="15">15</flux:select.option>
@@ -118,7 +118,7 @@
     </flux:card>
 
     <!-- Reject Modal -->
-    <flux:modal wire:model="showRejectModal" class="min-w-[400px]">
+    <flux:modal wire:model="showRejectModal" class="min-w-100">
         <div class="space-y-6">
             <div>
                 <flux:heading size="lg">{{ __('Reject Request') }}</flux:heading>

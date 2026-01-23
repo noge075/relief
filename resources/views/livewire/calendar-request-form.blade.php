@@ -1,4 +1,4 @@
-<flux:modal wire:model="showRequestModal" class="w-full md:min-w-[400px]">
+<flux:modal wire:model="showRequestModal" class="w-full md:min-w-100">
     <div class="space-y-6">
         <div>
             <flux:heading size="lg">
@@ -27,7 +27,7 @@
         </div>
 
         <div class="flex flex-col-reverse md:flex-row justify-between gap-4 md:gap-2">
-            @if($editingId)
+            @if($editingId && $this->canDelete)
                 <flux:button variant="danger" class="w-full md:w-auto" wire:click="deleteEvent({{ $editingId }})">{{ __('Delete') }}</flux:button>
             @else
                 <div></div>

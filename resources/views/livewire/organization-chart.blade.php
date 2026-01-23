@@ -69,10 +69,8 @@
         </div>
     </flux:card>
 
-    <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
-
     <!-- Edit Modal -->
-    <flux:modal wire:model="showEditModal" class="min-w-[400px]">
+    <flux:modal wire:model="showEditModal" class="min-w-100">
         <div class="space-y-6">
             <div>
                 <flux:heading size="lg">{{ __('Edit Manager') }}</flux:heading>

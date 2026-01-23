@@ -1,4 +1,4 @@
-<flux:modal wire:model="showModal" class="min-w-[800px] md:min-w-[1000px]">
+<flux:modal wire:model="showModal" class="min-w-200 md:min-w-250">
     <div class="space-y-6">
         <div>
             <flux:heading size="lg">{{ $isEditing ? __('Edit Role') : __('New Role') }}</flux:heading>

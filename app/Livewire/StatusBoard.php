@@ -127,7 +127,7 @@ class StatusBoard extends Component
             'matrix' => $matrix,
             'stats' => $stats,
             'departments' => Department::orderBy('name')->get(),
-            'managers' => User::role(RoleType::MANAGER->value)->orderBy('name')->get(),
+            'managers' => User::role(RoleType::MANAGER->value)->orderBy('last_name')->orderBy('first_name')->get(),
             'periodStart' => $start,
             'periodEnd' => $end,
         ])->title(__('Status Board'));

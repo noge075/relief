@@ -92,7 +92,7 @@ class OrganizationChart extends Component
     public function render()
     {
         return view('livewire.organization-chart', [
-            'allUsers' => User::orderBy('name')->get(),
+            'allUsers' => User::orderBy('last_name')->get(),
             'departments' => Department::all()
         ])->title(__('Organization Chart'));
     }

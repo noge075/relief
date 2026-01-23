@@ -1,4 +1,4 @@
-<flux:modal wire:model="showModal" class="min-w-[800px]">
+<flux:modal wire:model="showModal" class="min-w-200">
     <div class="space-y-6" x-data="{ tab: 'basic' }">
         <div>
             <flux:heading size="lg">{{ $isEditing ? __('Edit Employee') : __('New Employee') }}</flux:heading>
@@ -16,10 +16,15 @@
             <button @click="tab = 'permissions'" :class="tab === 'permissions' ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-zinc-500 hover:text-zinc-700 hover:border-zinc-300'" class="px-4 py-2 border-b-2 font-medium text-sm transition-colors">
                 {{ __('Permissions') }}
             </button>
+            @if($isEditing)
+                <button @click="tab = 'documents'" :class="tab === 'documents' ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-zinc-500 hover:text-zinc-700 hover:border-zinc-300'" class="px-4 py-2 border-b-2 font-medium text-sm transition-colors">
+                    {{ __('Documents') }}
+                </button>
+            @endif
         </div>
 
         <!-- Tab Content Wrapper -->
-        <div class="min-h-[450px]">
+        <div class="min-h-112.5">
             <!-- Basic Info Tab -->
             <div x-show="tab === 'basic'" class="space-y-4">
                 <!-- Fake inputs -->
@@ -96,7 +101,7 @@
                         {{ count($selectedPermissions) > 0 ? __('Deselect All') : __('Select All') }}
                     </flux:button>
                 </div>
-                <div class="mt-2 space-y-4 max-h-[400px] overflow-y-auto border rounded-lg p-4 bg-zinc-50 dark:bg-zinc-900">
+                <div class="mt-2 space-y-4 max-h-100 overflow-y-auto border rounded-lg p-4 bg-zinc-50 dark:bg-zinc-900">
                     @foreach($allPermissions as $group => $perms)
                         <div>
                             <flux:heading size="sm" class="mb-2 text-zinc-500 dark:text-zinc-400 uppercase tracking-wider text-xs font-bold">{{ __($group) }}</flux:heading>
@@ -126,6 +131,43 @@
                     @endforeach
                 </div>
             </div>
+
+            <!-- Documents Tab -->
+            @if($isEditing)
+                <div x-show="tab === 'documents'" class="space-y-4" style="display: none;">
+                    @can(\App\Enums\PermissionType::MANAGE_USER_DOCUMENTS->value)
+                        <div class="space-y-2">
+                            <flux:input type="file" wire:model="documentUpload" label="{{ __('Upload New Document') }}" />
+                            <div class="flex justify-end">
+                                <flux:button wire:click="uploadDocument" variant="primary" size="sm" :disabled="!$documentUpload">{{ __('Upload') }}</flux:button>
+                            </div>
+                        </div>
+                        <flux:separator />
+                    @endcan
+
+                    <flux:heading size="sm">{{ __('Uploaded Documents') }}</flux:heading>
+                    @if($userDocuments && $userDocuments->isNotEmpty())
+                        <div class="space-y-2">
+                            @foreach($userDocuments as $media)
+                                <div class="flex justify-between items-center p-2 bg-zinc-50 dark:bg-zinc-800 rounded border border-zinc-200 dark:border-zinc-700">
+                                    <div class="flex items-center gap-2 overflow-hidden">
+                                        <flux:icon name="paper-clip" class="text-zinc-400 shrink-0" />
+                                        <span class="text-sm truncate">{{ $media->file_name }}</span>
+                                    </div>
+                                    <div class="flex gap-2">
+                                        <flux:button variant="ghost" size="xs" icon="arrow-down-tray" wire:click="downloadDocument({{ $media->id }})" />
+                                        @can(\App\Enums\PermissionType::MANAGE_USER_DOCUMENTS->value)
+                                            <flux:button variant="ghost" size="xs" icon="trash" class="text-red-500 hover:text-red-600" wire:click="deleteDocument({{ $media->id }})" wire:confirm="{{ __('Are you sure?') }}" />
+                                        @endcan
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                    @else
+                        <p class="text-sm text-zinc-500">{{ __('No documents found.') }}</p>
+                    @endif
+                </div>
+            @endif
         </div>
 
         <div class="flex justify-end gap-2 pt-4 border-t border-zinc-200 dark:border-zinc-700">

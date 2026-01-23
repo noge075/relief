@@ -7,6 +7,7 @@ use App\Services\AttendanceService;
 use App\Services\PayrollService;
 use Carbon\Carbon;
 use Flux\Flux;
+use Illuminate\Validation\ValidationException;
 use Livewire\Component;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 
@@ -16,13 +17,10 @@ class MyAttendance extends Component
 
     public $year;
     public $month;
-    
     public $currentLog;
-
-    // Editing
     public $showEditModal = false;
     public $editingDate;
-    public $editingHours; // Csak megjelenítésre
+    public $editingHours;
     public $editingCheckIn;
     public $editingCheckOut;
 
@@ -37,14 +35,14 @@ class MyAttendance extends Component
         $this->payrollService = $payrollService;
     }
 
-    public function mount()
+    public function mount(): void
     {
         $this->year = Carbon::now()->year;
         $this->month = Carbon::now()->month;
         $this->loadCurrentLog();
     }
 
-    public function loadCurrentLog()
+    public function loadCurrentLog(): void
     {
         $this->currentLog = AttendanceLog::where('user_id', auth()->id())
             ->where('date', Carbon::today())
@@ -53,7 +51,7 @@ class MyAttendance extends Component
             ->first();
     }
 
-    public function checkIn()
+    public function checkIn(): void
     {
         $this->validateMonthlyClosure(Carbon::today());
 
@@ -68,7 +66,7 @@ class MyAttendance extends Component
         Flux::toast(__('Checked in successfully.'), variant: 'success');
     }
 
-    public function checkOut()
+    public function checkOut(): void
     {
         $this->validateMonthlyClosure(Carbon::today());
 
@@ -86,7 +84,7 @@ class MyAttendance extends Component
         }
     }
 
-    public function editLog($dateStr)
+    public function editLog($dateStr): void
     {
         $this->editingDate = $dateStr;
         $log = AttendanceLog::where('user_id', auth()->id())
@@ -106,7 +104,7 @@ class MyAttendance extends Component
         $this->showEditModal = true;
     }
 
-    public function saveLog()
+    public function saveLog(): void
     {
         $date = Carbon::parse($this->editingDate);
         $this->validateMonthlyClosure($date);
@@ -116,11 +114,9 @@ class MyAttendance extends Component
             'editingCheckOut' => 'nullable|date_format:H:i|after:editingCheckIn',
         ]);
 
-        // Check In/Out konvertálása datetime-ra
         $checkIn = $this->editingCheckIn ? $date->copy()->setTimeFromTimeString($this->editingCheckIn) : null;
         $checkOut = $this->editingCheckOut ? $date->copy()->setTimeFromTimeString($this->editingCheckOut) : null;
 
-        // Automatikus számítás
         $workedHours = 0;
         if ($checkIn && $checkOut) {
             $workedHours = $checkIn->floatDiffInHours($checkOut);
@@ -144,10 +140,10 @@ class MyAttendance extends Component
         $this->loadCurrentLog();
     }
 
-    protected function validateMonthlyClosure(Carbon $date)
+    protected function validateMonthlyClosure(Carbon $date): void
     {
         if ($this->payrollService->isMonthClosed($date->year, $date->month)) {
-            throw \Illuminate\Validation\ValidationException::withMessages([
+            throw ValidationException::withMessages([
                 'date' => __('This month is closed and cannot be modified.')
             ]);
         }

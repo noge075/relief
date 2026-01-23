@@ -26,10 +26,7 @@ class RoleAndPermissionSeeder extends Seeder
             Permission::firstOrCreate(['name' => $permission->value]);
         }
 
-        // 2. Define Roles and Assign Permissions
-
-        // Super Admin - Gets all permissions implicitly via Gate::before in AppServiceProvider
-        $superAdmin = Role::firstOrCreate(['name' => RoleType::SUPER_ADMIN->value]);
+        Role::firstOrCreate(['name' => RoleType::SUPER_ADMIN->value]);
 
         // HR - Human Resources
         $hr = Role::firstOrCreate(['name' => RoleType::HR->value]);
@@ -41,6 +38,7 @@ class RoleAndPermissionSeeder extends Seeder
             PermissionType::DELETE_USERS->value, 
             PermissionType::RESTORE_USERS->value, 
             PermissionType::VIEW_ANY_USER_PROFILE->value,
+            PermissionType::MANAGE_USER_DOCUMENTS->value,
             PermissionType::MANAGE_DEPARTMENTS->value,
             PermissionType::MANAGE_WORK_SCHEDULES->value, 
             PermissionType::ASSIGN_WORK_SCHEDULES->value,
@@ -68,10 +66,10 @@ class RoleAndPermissionSeeder extends Seeder
         // Manager - Team Lead
         $manager = Role::firstOrCreate(['name' => RoleType::MANAGER->value]);
         $manager->givePermissionTo([
-            PermissionType::VIEW_USERS->value, // Only subordinates (implied by lack of 'view all users')
+            PermissionType::VIEW_USERS->value,
             PermissionType::VIEW_ANY_USER_PROFILE->value,
             PermissionType::VIEW_LEAVE_REQUESTS->value, 
-            PermissionType::CREATE_LEAVE_REQUESTS->value, // Manager is kérhet
+            PermissionType::CREATE_LEAVE_REQUESTS->value,
             PermissionType::APPROVE_LEAVE_REQUESTS->value,
             PermissionType::VIEW_ATTENDANCE->value, 
             PermissionType::VIEW_STATUS_BOARD->value,

@@ -3,6 +3,8 @@
 namespace App\Livewire;
 
 use App\Models\LeaveRequest;
+use App\Enums\LeaveStatus;
+use App\Services\LeaveRequestService;
 use Flux\Flux;
 use Livewire\Component;
 use Livewire\WithPagination;
@@ -90,9 +92,31 @@ class MyRequests extends Component
         $media = Media::find($mediaId);
         
         if ($media && $media->model_id === $this->selectedRequest->id) {
+            if ($this->selectedRequest->status !== LeaveStatus::PENDING) {
+                 Flux::toast(__('Cannot delete documents from processed requests.'), variant: 'danger');
+                 return;
+            }
+
             $media->delete();
             Flux::toast(__('Document deleted.'), variant: 'success');
             $this->selectedRequest->refresh();
+        }
+    }
+
+    public function deleteRequest($id, LeaveRequestService $leaveRequestService)
+    {
+        try {
+            $leaveRequestService->deleteRequest($id, auth()->id());
+            Flux::toast(__('Request deleted.'), variant: 'success');
+            
+            // Ha a modal nyitva van és a törölt elemet nézzük, zárjuk be
+            if ($this->showDetailsModal && $this->selectedRequest && $this->selectedRequest->id === $id) {
+                $this->showDetailsModal = false;
+                $this->selectedRequest = null;
+            }
+            
+        } catch (\Exception $e) {
+            Flux::toast($e->getMessage(), variant: 'danger');
         }
     }
 

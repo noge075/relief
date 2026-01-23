@@ -53,7 +53,10 @@ class EloquentLeaveBalanceRepository extends BaseRepository implements LeaveBala
         if (!empty($filters['search'])) {
             $search = $filters['search'];
             $query->whereHas('user', function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%");
+                $q->where(function ($query) use ($search) {
+                    $query->where('first_name', 'like', "%{$search}%")
+                          ->orWhere('last_name', 'like', "%{$search}%");
+                });
             });
         }
 
@@ -65,7 +68,8 @@ class EloquentLeaveBalanceRepository extends BaseRepository implements LeaveBala
 
         if ($sortCol === 'name') {
             $query->join('users', 'leave_balances.user_id', '=', 'users.id')
-                ->orderBy('users.name', $sortAsc ? 'asc' : 'desc')
+                ->orderBy('users.last_name', $sortAsc ? 'asc' : 'desc')
+                ->orderBy('users.first_name', $sortAsc ? 'asc' : 'desc')
                 ->select('leave_balances.*');
         } else {
             $query->orderBy($sortCol, $sortAsc ? 'asc' : 'desc');
@@ -85,7 +89,10 @@ class EloquentLeaveBalanceRepository extends BaseRepository implements LeaveBala
         if (!empty($filters['search'])) {
             $search = $filters['search'];
             $query->whereHas('user', function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%");
+                $q->where(function ($query) use ($search) {
+                    $query->where('first_name', 'like', "%{$search}%")
+                          ->orWhere('last_name', 'like', "%{$search}%");
+                });
             });
         }
 
@@ -97,7 +104,8 @@ class EloquentLeaveBalanceRepository extends BaseRepository implements LeaveBala
 
         if ($sortCol === 'name') {
             $query->join('users', 'leave_balances.user_id', '=', 'users.id')
-                ->orderBy('users.name', $sortAsc ? 'asc' : 'desc')
+                ->orderBy('users.last_name', $sortAsc ? 'asc' : 'desc')
+                ->orderBy('users.first_name', $sortAsc ? 'asc' : 'desc')
                 ->select('leave_balances.*');
         } else {
             $query->orderBy($sortCol, $sortAsc ? 'asc' : 'desc');
