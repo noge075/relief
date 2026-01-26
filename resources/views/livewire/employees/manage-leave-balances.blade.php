@@ -12,7 +12,7 @@
         <div class="flex flex-col sm:flex-row gap-4 w-full lg:w-auto items-end">
             <flux:input wire:model.live.debounce.300ms="search" icon="magnifying-glass" placeholder="{{ __('Search by name...') }}" class="w-full sm:w-64" />
 
-            <flux:select wire:model.live="year" class="w-full sm:w-32">
+            <flux:select wire:model.live="yearFilter" class="w-full sm:w-32">
                 @foreach(range(Carbon\Carbon::now()->year - 1, Carbon\Carbon::now()->year + 1) as $y)
                     <flux:select.option value="{{ $y }}">{{ $y }}</flux:select.option>
                 @endforeach

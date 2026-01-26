@@ -6,178 +6,185 @@ use App\Models\SpecialDay;
 use App\Repositories\Contracts\SpecialDayRepositoryInterface;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Spatie\Holidays\Holidays;
 
 class HolidayService
 {
+    protected const int CACHE_TTL = 86400;
+
     public function __construct(
         protected SpecialDayRepositoryInterface $specialDayRepository
     ) {}
 
     /**
      * Ellenőrzi, hogy a megadott dátum munkaszüneti nap-e.
-     * (Hétvége, hivatalos ünnep, vagy áthelyezett pihenőnap)
-     * Kivéve, ha áthelyezett munkanap.
      */
     public function isHoliday(CarbonInterface $date): bool
     {
         $dateStr = $date->format('Y-m-d');
-
-        // 1. Megnézzük az adatbázist (kivételek)
         $specialDay = $this->specialDayRepository->findByDate($dateStr);
 
         if ($specialDay) {
-            if ($specialDay->type === 'holiday') {
-                return true; // Explicit pihenőnap (pl. híd nap)
-            }
-            if ($specialDay->type === 'workday') {
-                return false; // Explicit munkanap (pl. szombati ledolgozás)
-            }
+            return match ($specialDay->type) {
+                'holiday' => true,
+                'workday' => false,
+                default => $date->isWeekend(),
+            };
         }
 
-        // 2. Spatie Holidays (Hivatalos ünnepek)
-        try {
-            $holidays = Holidays::for('hu')->get('hu', $date->year);
-            foreach ($holidays as $holiday) {
-                if ($holiday['date']->format('Y-m-d') === $dateStr) {
-                    return true;
-                }
-            }
-        } catch (\Throwable $e) {
-            // Fallback
+        if ($this->isOfficialHoliday($date)) {
+            return true;
         }
 
-        // 3. Hétvége ellenőrzés
         return $date->isWeekend();
     }
 
     /**
-     * Visszaadja az összes ünnepnapot és pihenőnapot egy időszakra.
-     * (A hétvégéket nem teszi bele külön, csak ha explicit holiday)
+     * Visszaadja az összes ünnepnapot egy időszakra (DB + Hivatalos - Kivételek).
      */
     public function getHolidaysInRange(CarbonInterface $start, CarbonInterface $end): array
     {
-        $holidays = [];
-
-        // 1. Spatie Holidays
-        $years = range($start->year, $end->year);
-        foreach ($years as $year) {
-            try {
-                $spatieHolidays = Holidays::for('hu')->get('hu', $year);
-                foreach ($spatieHolidays as $holiday) {
-                    $hDate = Carbon::instance($holiday['date']);
-                    if ($hDate->between($start, $end)) {
-                        $holidays[$hDate->format('Y-m-d')] = [
-                            'date' => $hDate,
-                            'name' => $holiday['name'],
-                            'type' => 'holiday'
-                        ];
-                    }
-                }
-            } catch (\Throwable $e) {}
+        $officialHolidays = collect();
+        foreach (range($start->year, $end->year) as $year) {
+            $officialHolidays = $officialHolidays->merge($this->getSpatieHolidays($year));
         }
 
-        // 2. Adatbázis kivételek
+        $holidays = $officialHolidays
+            ->filter(fn ($h) => Carbon::parse($h['date'])->between($start, $end))
+            ->mapWithKeys(fn ($h) => [
+                $h['date']->format('Y-m-d') => [
+                    'date' => $h['date'],
+                    'name' => $h['name'],
+                    'type' => 'holiday'
+                ]
+            ]);
+
         $specialDays = $this->specialDayRepository->getInRange($start->format('Y-m-d'), $end->format('Y-m-d'));
 
         foreach ($specialDays as $day) {
+            $dateStr = $day->date->format('Y-m-d');
+
             if ($day->type === 'holiday') {
-                $holidays[$day->date->format('Y-m-d')] = [
+                $holidays[$dateStr] = [
                     'date' => $day->date,
                     'name' => $day->description ?? __('Special Holiday'),
                     'type' => 'holiday'
                 ];
             } elseif ($day->type === 'workday') {
-                unset($holidays[$day->date->format('Y-m-d')]);
+                $holidays->forget($dateStr);
             }
         }
 
-        return $holidays;
+        return $holidays->all();
     }
-    
+
     /**
      * Visszaadja az áthelyezett munkanapokat (pl. szombatok).
      */
     public function getExtraWorkdaysInRange(CarbonInterface $start, CarbonInterface $end): array
     {
-        $workdays = [];
         $specialDays = $this->specialDayRepository->getInRange($start->format('Y-m-d'), $end->format('Y-m-d'));
 
-        foreach ($specialDays as $day) {
-            if ($day->type === 'workday') {
-                $workdays[$day->date->format('Y-m-d')] = [
+        return $specialDays
+            ->where('type', 'workday')
+            ->mapWithKeys(fn ($day) => [
+                $day->date->format('Y-m-d') => [
                     'date' => $day->date,
                     'name' => $day->description ?? __('Extra Workday'),
                     'type' => 'workday'
-                ];
-            }
-        }
-        
-        return $workdays;
+                ]
+            ])
+            ->all();
     }
 
     /**
-     * Visszaadja a nyers adatokat (Spatie + DB) adminisztrációhoz.
+     * Adminisztrációs nézethez adatok.
      */
     public function getRawSpecialDays(int $year, ?string $search = null, string $sortCol = 'date', bool $sortAsc = true): array
     {
-        $days = [];
+        $spatieDays = $this->getSpatieHolidays($year)->map(fn ($h) => [
+            'id' => null,
+            'date' => $h['date']->format('Y-m-d'),
+            'name' => $h['name'],
+            'type' => 'holiday',
+            'source' => 'auto',
+        ]);
 
-        // 1. Spatie
-        try {
-            $spatie = Holidays::for('hu')->get('hu', $year);
-            
-            foreach ($spatie as $h) {
-                $days[$h['date']->format('Y-m-d')] = [
-                    'id' => null,
-                    'date' => $h['date']->format('Y-m-d'),
-                    'name' => $h['name'],
-                    'type' => 'holiday',
-                    'source' => 'auto',
-                ];
-            }
-        } catch (\Throwable $e) {
-            Log::error('Spatie Holidays Error: ' . $e->getMessage());
-        }
+        $dbDays = $this->specialDayRepository->getByYear($year)->map(fn ($day) => [
+            'id' => $day->id,
+            'date' => $day->date->format('Y-m-d'),
+            'name' => $day->description ?? ($day->type === 'holiday' ? __('Special Holiday') : __('Extra Workday')),
+            'type' => $day->type,
+            'source' => 'manual',
+        ]);
 
-        // 2. DB
-        $dbDays = $this->specialDayRepository->getByYear($year);
-        foreach ($dbDays as $day) {
-            $days[$day->date->format('Y-m-d')] = [
-                'id' => $day->id,
-                'date' => $day->date->format('Y-m-d'),
-                'name' => $day->description ?? ($day->type === 'holiday' ? __('Special Holiday') : __('Extra Workday')),
-                'type' => $day->type,
-                'source' => 'manual',
-            ];
-        }
-
-        // Szűrés
-        if ($search) {
-            $days = array_filter($days, function ($day) use ($search) {
-                return stripos($day['name'], $search) !== false || stripos($day['date'], $search) !== false;
-            });
-        }
-
-        // Rendezés
-        usort($days, function ($a, $b) use ($sortCol, $sortAsc) {
-            $valA = $a[$sortCol] ?? '';
-            $valB = $b[$sortCol] ?? '';
-            
-            if ($valA == $valB) return 0;
-            
-            if ($sortAsc) {
-                return $valA < $valB ? -1 : 1;
-            } else {
-                return $valA > $valB ? -1 : 1;
-            }
-        });
-
-        return $days;
+        return $spatieDays->merge($dbDays)
+            ->when($search, function ($collection) use ($search) {
+                return $collection->filter(function ($item) use ($search) {
+                    return str_contains(strtolower($item['name']), strtolower($search)) ||
+                        str_contains($item['date'], $search);
+                });
+            })
+            ->sortBy($sortCol, SORT_REGULAR, !$sortAsc)
+            ->values()
+            ->all();
     }
 
-    // --- CRUD Műveletek ---
+
+    /**
+     * Cache-elt lekérdezés a Spatie Holidays csomagból.
+     * Ez gyorsítja a folyamatot, ha sokszor hívjuk meg ugyanazt az évet.
+     */
+    protected function getSpatieHolidays(int $year): Collection
+    {
+        return Cache::remember("holidays_hu_{$year}", self::CACHE_TTL, function () use ($year) {
+            try {
+                $data = Holidays::for('hu')->get('hu', $year);
+                return collect($data);
+            } catch (\Throwable $e) {
+                Log::error("Spatie Holidays hiba ({$year}): " . $e->getMessage());
+                return collect();
+            }
+        });
+    }
+
+    protected function isOfficialHoliday(CarbonInterface $date): bool
+    {
+        $holidays = $this->getSpatieHolidays($date->year);
+        $dateStr = $date->format('Y-m-d');
+
+        return $holidays->contains(fn ($holiday) => $holiday['date']->format('Y-m-d') === $dateStr);
+    }
+
+    public function createSpecialDay(array $data): SpecialDay
+    {
+        $this->clearCache($data['date'] ?? now());
+        return $this->specialDayRepository->create($data);
+    }
+
+    public function updateSpecialDay(int $id, array $data): bool
+    {
+        $day = $this->specialDayRepository->find($id);
+        if ($day) $this->clearCache($day->date);
+
+        return $this->specialDayRepository->update($id, $data);
+    }
+
+    public function deleteSpecialDay(int $id): bool
+    {
+        $day = $this->specialDayRepository->find($id);
+        if ($day) $this->clearCache($day->date);
+
+        return $this->specialDayRepository->delete($id);
+    }
+
+    protected function clearCache($date): void
+    {
+        $year = $date instanceof CarbonInterface ? $date->year : Carbon::parse($date)->year;
+    }
 
     public function getSpecialDaysByYear(int $year)
     {
@@ -186,26 +193,9 @@ class HolidayService
 
     public function findSpecialDay(int $id): ?SpecialDay
     {
+        /**
+         * @var SpecialDay $day
+         */
         return $this->specialDayRepository->find($id);
-    }
-
-    public function findSpecialDayByDate(string $date): ?SpecialDay
-    {
-        return $this->specialDayRepository->findByDate($date);
-    }
-
-    public function createSpecialDay(array $data): SpecialDay
-    {
-        return $this->specialDayRepository->create($data);
-    }
-
-    public function updateSpecialDay(int $id, array $data): bool
-    {
-        return $this->specialDayRepository->update($id, $data);
-    }
-
-    public function deleteSpecialDay(int $id): bool
-    {
-        return $this->specialDayRepository->delete($id);
     }
 }

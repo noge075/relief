@@ -34,15 +34,21 @@ class UserService
             $data['password'] = Hash::make($data['password'] ?? 'password');
             $roleName = $data['role'] ?? RoleType::EMPLOYEE->value;
             $permissions = $data['permissions'] ?? [];
+            $departments = $data['departments'] ?? [];
             
             unset($data['role']);
             unset($data['permissions']);
+            unset($data['departments']);
 
             $user = $this->userRepository->create($data);
             $this->userRepository->syncRoles($user, [$roleName]);
             
             if (!empty($permissions)) {
                 $this->userRepository->syncPermissions($user, $permissions);
+            }
+
+            if (!empty($departments)) {
+                $user->departments()->sync($departments);
             }
 
             return $user;
@@ -60,9 +66,11 @@ class UserService
 
             $roleName = $data['role'] ?? null;
             $permissions = $data['permissions'] ?? null;
+            $departments = $data['departments'] ?? null;
             
             unset($data['role']);
             unset($data['permissions']);
+            unset($data['departments']); // Új: departments
 
             $updated = $this->userRepository->update($id, $data);
 
@@ -75,6 +83,10 @@ class UserService
                 
                 if ($permissions !== null) {
                     $this->userRepository->syncPermissions($user, $permissions);
+                }
+
+                if ($departments !== null) {
+                    $user->departments()->sync($departments);
                 }
             }
 

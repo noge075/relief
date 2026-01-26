@@ -15,7 +15,8 @@ class MyLeaveBalances extends Component
 {
     use AuthorizesRequests;
 
-    public $year;
+    public $startDate;
+    public $endDate;
     public $vacationBalance;
     public $vacationPending = 0;
     public $vacationApproved = 0;
@@ -34,34 +35,42 @@ class MyLeaveBalances extends Component
         $this->leaveRequestRepository = $leaveRequestRepository;
     }
 
-    public function mount()
+    public function mount(): void
     {
-        $this->year = Carbon::now()->year;
+        $this->startDate = Carbon::now()->startOfYear()->format('Y-m-d');
+        $this->endDate = Carbon::now()->endOfYear()->format('Y-m-d');
+        $this->loadData();
+    }
+
+    #[On('date-range-selected')]
+    public function updateDateRange($startDate, $endDate): void
+    {
+        $this->startDate = $startDate;
+        $this->endDate = $endDate;
         $this->loadData();
     }
 
     #[On('leave-request-updated')]
-    public function loadData()
+    public function loadData(): void
     {
         $user = auth()->user();
-        $startOfYear = Carbon::createFromDate($this->year, 1, 1)->format('Y-m-d');
-        $endOfYear = Carbon::createFromDate($this->year, 12, 31)->format('Y-m-d');
+        $year = Carbon::parse($this->startDate)->year;
 
         // 1. Szabadság keret
-        $this->vacationBalance = $this->leaveBalanceRepository->getBalance($user->id, $this->year, LeaveType::VACATION->value);
+        $this->vacationBalance = $this->leaveBalanceRepository->getBalance($user->id, $year, LeaveType::VACATION->value);
         
         // Elfogadott (a balance used mezője tartalmazza)
         $this->vacationApproved = $this->vacationBalance ? $this->vacationBalance->used : 0;
 
         // Függő szabadságok lekérése
-        $pendingVacationRequests = $this->leaveRequestRepository->getForUserInPeriod($user->id, $startOfYear, $endOfYear)
+        $pendingVacationRequests = $this->leaveRequestRepository->getForUserInPeriod($user->id, $this->startDate, $this->endDate)
             ->where('type', LeaveType::VACATION)
             ->where('status', LeaveStatus::PENDING);
             
         $this->vacationPending = $pendingVacationRequests->sum('days_count');
 
         // 2. Betegszabadság (LeaveRequest-ekből számolva)
-        $allSickRequests = $this->leaveRequestRepository->getForUserInPeriod($user->id, $startOfYear, $endOfYear)
+        $allSickRequests = $this->leaveRequestRepository->getForUserInPeriod($user->id, $this->startDate, $this->endDate)
             ->where('type', LeaveType::SICK);
 
         $this->sickApproved = $allSickRequests->where('status', LeaveStatus::APPROVED)->sum('days_count');

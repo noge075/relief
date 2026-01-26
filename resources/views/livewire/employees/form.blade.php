@@ -39,10 +39,12 @@
                 <flux:input wire:model="email" label="{{ __('Email Address') }}" type="email" autocomplete="off" />
 
                 <div class="grid grid-cols-2 gap-4">
-                    <flux:select wire:model="department_id" label="{{ __('Department') }}">
-                        <flux:select.option value="">{{ __('Select...') }}</flux:select.option>
+                    <flux:select indicator="checkbox" variant="listbox" multiple
+                            wire:model="selectedDepartmentIds" label="{{ __('Department') }}" placeholder="{{ __('Select...') }}">
                         @foreach($departments as $dept)
-                            <flux:select.option value="{{ $dept->id }}">{{ $dept->name }}</flux:select.option>
+                            <flux:select.option value="{{ $dept->id }}">
+                                {{ $dept->name }}
+                            </flux:select.option>
                         @endforeach
                     </flux:select>
 

@@ -8,7 +8,7 @@
                 </div>
                 <div>
                     <flux:heading size="lg">{{ __('Vacation') }}</flux:heading>
-                    <flux:subheading>{{ $year }}</flux:subheading>
+                    <flux:subheading>{{ \Carbon\Carbon::parse($this->startDate)->year }}</flux:subheading>
                 </div>
             </div>
             <div class="text-right">
@@ -56,7 +56,7 @@
                 </div>
                 <div>
                     <flux:heading size="lg">{{ __('Sick Leave') }}</flux:heading>
-                    <flux:subheading>{{ $year }}</flux:subheading>
+                    <flux:subheading>{{ \Carbon\Carbon::parse($this->startDate)->year }}</flux:subheading>
                 </div>
             </div>
             <div class="text-right">

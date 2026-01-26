@@ -17,15 +17,19 @@
     <flux:card class="p-0! overflow-hidden">
         <flux:table>
             <flux:table.columns>
-                <flux:table.column sortable :sorted="$sortCol === 'name'" :direction="$sortAsc ? 'asc' : 'desc'" wire:click="sortBy('name')">{{ __('Name') }}</flux:table.column>
-                <flux:table.column sortable :sorted="$sortCol === 'permissions_count'" :direction="$sortAsc ? 'asc' : 'desc'" wire:click="sortBy('permissions_count')">{{ __('Permissions Count') }}</flux:table.column>
+                <flux:table.column sortable :sorted="$sortCol === 'name'" :direction="$sortAsc ? 'asc' : 'desc'" wire:click="sortBy('name')">
+                    {{ __('Name') }}
+                </flux:table.column>
+                <flux:table.column sortable :sorted="$sortCol === 'permissions_count'" :direction="$sortAsc ? 'asc' : 'desc'" wire:click="sortBy('permissions_count')">
+                    {{ __('Permissions Count') }}
+                </flux:table.column>
                 <flux:table.column>{{ __('Actions') }}</flux:table.column>
             </flux:table.columns>
 
             <flux:table.rows>
                 @foreach($roles as $role)
                     <flux:table.row :key="$role->id">
-                        <flux:table.cell class="font-medium">{{ $role->name }}</flux:table.cell>
+                        <flux:table.cell class="font-medium">{{ __($role->name) }}</flux:table.cell>
                         <flux:table.cell>{{ $role->permissions_count }} {{ __('permissions') }}</flux:table.cell>
                         <flux:table.cell>
                             <flux:dropdown>

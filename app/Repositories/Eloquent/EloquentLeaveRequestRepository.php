@@ -31,9 +31,8 @@ class EloquentLeaveRequestRepository extends BaseRepository implements LeaveRequ
     {
         return LeaveRequest::where('user_id', $userId)
             ->where(function ($query) use ($start, $end) {
-                // Átfedés logika: (StartA <= EndB) and (EndA >= StartB)
                 $query->where('start_date', '<=', $end)
-                      ->where('end_date', '>=', $start);
+                    ->where('end_date', '>=', $start);
             })
             ->orderBy('start_date')
             ->get();
@@ -49,8 +48,13 @@ class EloquentLeaveRequestRepository extends BaseRepository implements LeaveRequ
             ->get();
     }
 
-    public function getPendingRequests(?int $managerId = null, int $perPage = 10, array $filters = [], string $sortCol = 'start_date', bool $sortAsc = true): LengthAwarePaginator
-    {
+    public function getPendingRequests(
+        ?int $managerId = null,
+        int $perPage = 10,
+        array $filters = [],
+        string $sortCol = 'start_date',
+        bool $sortAsc = true
+    ): LengthAwarePaginator {
         $query = LeaveRequest::with('user')
             ->where('status', LeaveStatus::PENDING->value);
 
@@ -65,7 +69,7 @@ class EloquentLeaveRequestRepository extends BaseRepository implements LeaveRequ
             $query->whereHas('user', function ($q) use ($search) {
                 $q->where(function ($query) use ($search) {
                     $query->where('first_name', 'like', "%{$search}%")
-                          ->orWhere('last_name', 'like', "%{$search}%");
+                        ->orWhere('last_name', 'like', "%{$search}%");
                 });
             });
         }
@@ -88,10 +92,6 @@ class EloquentLeaveRequestRepository extends BaseRepository implements LeaveRequ
 
     public function findOverlapping(int $userId, string $start, string $end, ?int $excludeId = null): Collection
     {
-        // Átfedés logika:
-        // (StartA <= EndB) and (EndA >= StartB)
-        // Kihagyjuk a 'Rejected' és 'Cancelled' státuszokat, mert azok nem foglalnak helyet.
-
         return LeaveRequest::where('user_id', $userId)
             ->where(function ($query) {
                 $query->where('status', LeaveStatus::APPROVED->value)
@@ -107,14 +107,17 @@ class EloquentLeaveRequestRepository extends BaseRepository implements LeaveRequ
             ->get();
     }
 
-    public function updateStatus(LeaveRequest $request, string $status, ?string $comment = null): bool
+    public function updateStatus(
+        LeaveRequest $request,
+        string       $status,
+        ?string      $comment = null
+    ): bool
     {
         $data = ['status' => $status];
         if ($comment) {
             $data['manager_comment'] = $comment;
         }
 
-        // Ha elfogadják, beállítjuk az approvert a jelenlegi userre
         if ($status === LeaveStatus::APPROVED->value) {
             $data['approver_id'] = auth()->id();
         }

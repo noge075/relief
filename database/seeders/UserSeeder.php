@@ -18,8 +18,8 @@ class UserSeeder extends Seeder
      */
     public function run(): void
     {
-        $itDept = Department::where('name', 'IT')->first();
-        $hrDept = Department::where('name', 'HR')->first();
+        $itDept = Department::where('name', 'IT Fejlesztés')->first();
+        $hrDept = Department::where('name', 'HR & Payroll')->first();
         
         $standardSchedule = WorkSchedule::where('name', 'Standard (40h)')->first();
 
@@ -30,11 +30,13 @@ class UserSeeder extends Seeder
             'email' => 'admin@oe.hu',
             'password' => Hash::make('password'),
             'employment_type' => EmploymentType::STANDARD,
-            'department_id' => $itDept?->id,
             'work_schedule_id' => $standardSchedule?->id,
             'hired_at' => now()->subYears(5),
         ]);
         $admin->assignRole(RoleType::SUPER_ADMIN->value);
+        if ($itDept) {
+            $admin->departments()->attach($itDept);
+        }
 
         // 2. HR User
         $hr = User::create([
@@ -43,11 +45,13 @@ class UserSeeder extends Seeder
             'email' => 'hr@oe.hu',
             'password' => Hash::make('password'),
             'employment_type' => EmploymentType::STANDARD,
-            'department_id' => $hrDept?->id,
             'work_schedule_id' => $standardSchedule?->id,
             'hired_at' => now()->subYears(3),
         ]);
         $hr->assignRole(RoleType::HR->value);
+        if ($hrDept) {
+            $hr->departments()->attach($hrDept);
+        }
 
         // 3. Manager
         $manager = User::create([
@@ -56,11 +60,13 @@ class UserSeeder extends Seeder
             'email' => 'manager@oe.hu',
             'password' => Hash::make('password'),
             'employment_type' => EmploymentType::STANDARD,
-            'department_id' => $itDept?->id,
             'work_schedule_id' => $standardSchedule?->id,
             'hired_at' => now()->subYears(4),
         ]);
         $manager->assignRole(RoleType::MANAGER->value);
+        if ($itDept) {
+            $manager->departments()->attach($itDept);
+        }
 
         // 4. Employee (Manager beosztottja)
         $employee = User::create([
@@ -69,12 +75,14 @@ class UserSeeder extends Seeder
             'email' => 'employee@oe.hu',
             'password' => Hash::make('password'),
             'employment_type' => EmploymentType::STANDARD,
-            'department_id' => $itDept?->id,
             'manager_id' => $manager->id,
             'work_schedule_id' => $standardSchedule?->id,
             'hired_at' => now()->subYears(1),
         ]);
         $employee->assignRole(RoleType::EMPLOYEE->value);
+        if ($itDept) {
+            $employee->departments()->attach($itDept);
+        }
         
         // 5. Payroll User
         $payroll = User::create([
@@ -83,10 +91,12 @@ class UserSeeder extends Seeder
             'email' => 'payroll@oe.hu',
             'password' => Hash::make('password'),
             'employment_type' => EmploymentType::STANDARD,
-            'department_id' => $hrDept?->id,
             'work_schedule_id' => $standardSchedule?->id,
             'hired_at' => now()->subYears(2),
         ]);
         $payroll->assignRole(RoleType::PAYROLL->value);
+        if ($hrDept) {
+            $payroll->departments()->attach($hrDept);
+        }
     }
 }

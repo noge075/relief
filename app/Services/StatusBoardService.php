@@ -23,10 +23,12 @@ class StatusBoardService
     public function getStatusMatrix(User $actor, Carbon $start, Carbon $end, array $filters = []): array
     {
         // 1. Dolgozók lekérése (WorkSchedule betöltésével)
-        $users = User::with('workSchedule')
+        $users = User::with('workSchedule', 'departments')
             ->where('is_active', true)
             ->when($filters['department_id'] ?? null, function ($q, $id) {
-                $q->where('department_id', $id);
+                $q->whereHas('departments', function ($query) use ($id) {
+                    $query->where('departments.id', $id);
+                });
             })
             ->when($filters['manager_id'] ?? null, function ($q, $id) {
                 $q->where('manager_id', $id);
@@ -60,7 +62,6 @@ class StatusBoardService
         $period = CarbonPeriod::create($start, $end);
 
         foreach ($users as $user) {
-            // Jogosultság ellenőrzés a részletekhez
             $canViewDetails = $actor->id === $user->id || 
                               $actor->id === $user->manager_id || 
                               $actor->can(PermissionType::VIEW_LEAVE_REQUEST_DETAILS->value);
@@ -74,7 +75,7 @@ class StatusBoardService
 
             foreach ($period as $date) {
                 $dateStr = $date->format('Y-m-d');
-                $status = 'present'; // Alapértelmezett: Bent (Zöld)
+                $status = 'present';
                 $meta = null;
                 $isPending = false;
 
@@ -125,12 +126,10 @@ class StatusBoardService
                     foreach ($leaveRequests[$user->id] as $request) {
                         if ($date->between($request->start_date, $request->end_date)) {
                             $status = $request->type->value; // vacation, sick, home_office
-                            
-                            // Ha láthatja a részleteket, akkor az indoklás, különben null
                             $meta = $canViewDetails ? ($request->reason ?: null) : null;
-
                             $isPending = $request->status === LeaveStatus::PENDING;
-                            break; // Találtunk egyet, kilépünk
+
+                            break;
                         }
                     }
                 }

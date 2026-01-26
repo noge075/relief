@@ -22,7 +22,7 @@ class EloquentUserRepository extends BaseRepository implements UserRepositoryInt
 
     public function getSubordinatesPaginated(int $managerId, int $perPage = 10, array $filters = [], string $sortCol = 'name', bool $sortAsc = true): LengthAwarePaginator
     {
-        $query = $this->model->with(['department', 'roles'])
+        $query = $this->model->with(['departments', 'roles'])
             ->where('manager_id', $managerId);
 
         $this->applyFilters($query, $filters);
@@ -37,14 +37,9 @@ class EloquentUserRepository extends BaseRepository implements UserRepositoryInt
         return $query->paginate($perPage);
     }
 
-    public function getByDepartment(int $departmentId): Collection
-    {
-        return User::where('department_id', $departmentId)->get();
-    }
-
     public function getPaginated(int $perPage = 10, array $filters = [], string $sortCol = 'name', bool $sortAsc = true): LengthAwarePaginator
     {
-        $query = $this->model->with(['department', 'roles']);
+        $query = $this->model->with(['departments', 'roles']);
 
         $this->applyFilters($query, $filters);
 
@@ -71,7 +66,9 @@ class EloquentUserRepository extends BaseRepository implements UserRepositoryInt
         }
 
         if (!empty($filters['department_id'])) {
-            $query->where('department_id', $filters['department_id']);
+            $query->whereHas('departments', function ($q) use ($filters) {
+                $q->where('departments.id', $filters['department_id']);
+            });
         }
 
         if (isset($filters['status']) && $filters['status'] !== '') {

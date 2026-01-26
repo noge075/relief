@@ -19,9 +19,8 @@ class EloquentAttendanceLogRepository extends BaseRepository implements Attendan
         ->where('date', $date);
 
         if ($departmentId) {
-            // Itt használjuk a kapcsolatot: logs -> user -> department
-            $query->whereHas('user', function ($q) use ($departmentId) {
-                $q->where('department_id', $departmentId);
+            $query->whereHas('user.departments', function ($q) use ($departmentId) {
+                $q->where('departments.id', $departmentId);
             });
         }
 

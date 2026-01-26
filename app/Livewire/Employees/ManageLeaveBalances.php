@@ -31,8 +31,9 @@ class ManageLeaveBalances extends Component
     public $year;
     public $type = LeaveType::VACATION->value;
     public $allowance;
-    public $used;
+    public $used = 0;
     public $users = [];
+    public $availableYears = [];
 
     protected LeaveBalanceRepositoryInterface $leaveBalanceRepository;
     protected UserRepositoryInterface $userRepository;
@@ -62,6 +63,9 @@ class ManageLeaveBalances extends Component
         $this->sortCol = 'name';
 
         $this->perPage = request()->query('per_page', 10);
+        
+        $currentYear = Carbon::now()->year;
+        $this->availableYears = [$currentYear, $currentYear + 1];
     }
 
     public function updatedSearch(): void
@@ -82,6 +86,18 @@ class ManageLeaveBalances extends Component
     public function updatedPerPage(): void
     {
         $this->resetPage();
+    }
+    
+    public function updatedYear(): void
+    {
+        if (!$this->editingBalanceId) {
+            $this->users = $this->userRepository->getUsersWithoutLeaveBalance((int) $this->year);
+            if ($this->users->isNotEmpty()) {
+                $this->userId = $this->users->first()->id;
+            } else {
+                $this->userId = null;
+            }
+        }
     }
 
     public function clearFilters(): void
@@ -132,6 +148,7 @@ class ManageLeaveBalances extends Component
         $rules = [
             'allowance' => 'required|numeric|min:0',
             'used' => 'required|numeric|min:0',
+            'year' => 'required|integer|in:' . implode(',', $this->availableYears),
         ];
 
         if (!$this->editingBalanceId) {
@@ -144,6 +161,7 @@ class ManageLeaveBalances extends Component
             $this->leaveBalanceRepository->update($this->editingBalanceId, [
                 'allowance' => $this->allowance,
                 'used' => $this->used,
+                'year' => $this->year,
             ]);
             Flux::toast(__('Leave balance updated successfully.'), variant: 'success');
         } else {

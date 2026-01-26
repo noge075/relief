@@ -14,9 +14,6 @@ interface UserRepositoryInterface extends BaseRepositoryInterface
     // Visszaadja a vezető közvetlen beosztottait paginálva és kereshetően
     public function getSubordinatesPaginated(int $managerId, int $perPage = 10, array $filters = [], string $sortCol = 'name', bool $sortAsc = true): LengthAwarePaginator;
 
-    // HR-nek: csoport szerinti szűrés
-    public function getByDepartment(int $departmentId): Collection;
-
     public function getPaginated(int $perPage = 10, array $filters = [], string $sortCol = 'name', bool $sortAsc = true): LengthAwarePaginator;
     public function syncRoles(User $user, array $roles);
     public function syncPermissions(User $user, array $permissions);

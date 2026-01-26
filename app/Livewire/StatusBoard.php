@@ -36,9 +36,7 @@ class StatusBoard extends Component
     public function mount()
     {
         $this->authorize(PermissionType::VIEW_STATUS_BOARD->value);
-        // Alapértelmezetten az aktuális hét
-        $this->startDate = Carbon::now()->startOfWeek()->format('Y-m-d');
-        $this->endDate = Carbon::now()->endOfWeek()->format('Y-m-d');
+        $this->thisWeek();
     }
 
     public function placeholder()
@@ -80,10 +78,28 @@ class StatusBoard extends Component
         $this->endDate = $end->addDays($diff)->format('Y-m-d');
     }
     
-    public function today()
+    public function thisWeek()
     {
         $this->startDate = Carbon::now()->startOfWeek()->format('Y-m-d');
         $this->endDate = Carbon::now()->endOfWeek()->format('Y-m-d');
+    }
+
+    public function previousWeek()
+    {
+        $this->startDate = Carbon::now()->subWeek()->startOfWeek()->format('Y-m-d');
+        $this->endDate = Carbon::now()->subWeek()->endOfWeek()->format('Y-m-d');
+    }
+
+    public function thisMonth()
+    {
+        $this->startDate = Carbon::now()->startOfMonth()->format('Y-m-d');
+        $this->endDate = Carbon::now()->endOfMonth()->format('Y-m-d');
+    }
+
+    public function previousMonth()
+    {
+        $this->startDate = Carbon::now()->subMonth()->startOfMonth()->format('Y-m-d');
+        $this->endDate = Carbon::now()->subMonth()->endOfMonth()->format('Y-m-d');
     }
 
     public function clearFilters()

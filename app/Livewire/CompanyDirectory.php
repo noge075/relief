@@ -47,7 +47,9 @@ class CompanyDirectory extends Component
                 });
             })
             ->when($this->departmentFilter, function ($query, $departmentId) {
-                $query->where('department_id', $departmentId);
+                $query->whereHas('departments', function ($q) use ($departmentId) {
+                    $q->where('departments.id', $departmentId);
+                });
             })
             ->orderBy('last_name')
             ->orderBy('first_name')

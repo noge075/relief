@@ -47,7 +47,7 @@ class EloquentLeaveBalanceRepository extends BaseRepository implements LeaveBala
 
     public function getPaginated(int $year, array $filters = [], int $perPage = 10, string $sortCol = 'name', bool $sortAsc = true): LengthAwarePaginator
     {
-        $query = LeaveBalance::with('user')
+        $query = LeaveBalance::with('user.departments')
             ->where('year', $year);
 
         if (!empty($filters['search'])) {
@@ -61,8 +61,8 @@ class EloquentLeaveBalanceRepository extends BaseRepository implements LeaveBala
         }
 
         if (!empty($filters['department_id'])) {
-            $query->whereHas('user', function ($q) use ($filters) {
-                $q->where('department_id', $filters['department_id']);
+            $query->whereHas('user.departments', function ($q) use ($filters) {
+                $q->where('departments.id', $filters['department_id']);
             });
         }
 
@@ -80,7 +80,7 @@ class EloquentLeaveBalanceRepository extends BaseRepository implements LeaveBala
 
     public function getPaginatedForManager(int $managerId, int $year, array $filters = [], int $perPage = 10, string $sortCol = 'name', bool $sortAsc = true): LengthAwarePaginator
     {
-        $query = LeaveBalance::with('user')
+        $query = LeaveBalance::with('user.departments')
             ->where('year', $year)
             ->whereHas('user', function ($q) use ($managerId) {
                 $q->where('manager_id', $managerId);
@@ -97,8 +97,8 @@ class EloquentLeaveBalanceRepository extends BaseRepository implements LeaveBala
         }
 
         if (!empty($filters['department_id'])) {
-            $query->whereHas('user', function ($q) use ($filters) {
-                $q->where('department_id', $filters['department_id']);
+            $query->whereHas('user.departments', function ($q) use ($filters) {
+                $q->where('departments.id', $filters['department_id']);
             });
         }
 

@@ -5,6 +5,8 @@ namespace App\Models;
 use App\Enums\EmploymentType;
 use App\Enums\PermissionType;
 use Illuminate\Database\Eloquent\Casts\Attribute;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -29,7 +31,7 @@ class User extends Authenticatable implements HasMedia
     protected $fillable = [
         'last_name', 'first_name',
         'email', 'password',
-        'employment_type', 'department_id', 'manager_id',
+        'employment_type', 'manager_id',
         'work_schedule_id', 'hired_at', 'is_active',
         'signature_path',
         'id_card_number', 'tax_id', 'ssn', 'address', 'phone',
@@ -98,17 +100,20 @@ class User extends Authenticatable implements HasMedia
         return strtoupper($first . $second);
     }
 
-    public function getProfilePhotoUrlAttribute()
+    public function getProfilePhotoUrlAttribute(): string
     {
         return $this->getFirstMediaUrl('avatar');
     }
 
-    public function department()
+    /**
+     * Get the departments the user belongs to.
+     */
+    public function departments(): BelongsToMany
     {
-        return $this->belongsTo(Department::class);
+        return $this->belongsToMany(Department::class, 'department_user', 'user_id', 'department_id');
     }
 
-    public function workSchedule()
+    public function workSchedule(): BelongsTo
     {
         return $this->belongsTo(WorkSchedule::class);
     }

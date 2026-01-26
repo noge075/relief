@@ -59,6 +59,26 @@ class ManageAuditLogs extends Component
         $this->showDetailsModal = true;
     }
 
+    public function getSubjectDescription(Activity $activity): string
+    {
+        if (!$activity->subject) {
+            return __('Unknown');
+        }
+
+        $type = class_basename($activity->subject_type);
+        $id = $activity->subject_id;
+
+        return __($type) . ' #' . $id;
+    }
+
+    public function getCauserName(Activity $activity): string
+    {
+        if (!$activity->causer) {
+            return __('System');
+        }
+        return $activity->causer->name;
+    }
+
     public function render()
     {
         $query = Activity::with('causer', 'subject')->latest();

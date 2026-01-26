@@ -6,20 +6,21 @@ use App\Enums\LeaveStatus;
 use App\Enums\LeaveType;
 use App\Enums\PermissionType;
 use App\Enums\RoleType;
+use App\Models\LeaveRequest;
 use App\Models\Setting;
 use App\Models\User;
 use App\Notifications\LeaveRequestApprovedNotification;
-use App\Notifications\LeaveRequestRejectedNotification;
 use App\Notifications\LeaveRequestDeletedNotification;
+use App\Notifications\LeaveRequestRejectedNotification;
 use App\Notifications\NewLeaveRequestNotification;
 use App\Repositories\Contracts\LeaveBalanceRepositoryInterface;
 use App\Repositories\Contracts\LeaveRequestRepositoryInterface;
 use Carbon\Carbon;
-use Carbon\CarbonInterface;
+use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Validation\ValidationException;
 
 class LeaveRequestService
 {
@@ -30,215 +31,99 @@ class LeaveRequestService
         protected PayrollService $payrollService
     ) {}
 
-    public function createRequest(User $user, array $data)
+    /**
+     * Handle the creation of a new leave request.
+     */
+    public function createRequest(User $user, array $data): LeaveRequest
     {
-        $startDate = Carbon::parse($data['start_date']);
-        $endDate = Carbon::parse($data['end_date']);
-        $type = LeaveType::from($data['type']);
-        
-        // Múltbeli dátum ellenőrzése
-        if ($startDate->isPast() && !$startDate->isToday() && $type !== LeaveType::SICK) {
-            if (!$user->can(PermissionType::CREATE_PAST_LEAVE_REQUESTS->value)) {
-                throw ValidationException::withMessages([
-                    'date' => __('Cannot create leave request for past dates (except sick leave).')
-                ]);
-            }
-        }
-        
-        // Havi zárás ellenőrzése
-        $this->validateMonthlyClosure($startDate);
-        if ($startDate->month !== $endDate->month) {
-            $this->validateMonthlyClosure($endDate);
-        }
-        
-        // 1. Átfedés vizsgálat
-        $overlapping = $this->leaveRequestRepository->findOverlapping(
-            $user->id, 
-            $startDate->format('Y-m-d'), 
-            $endDate->format('Y-m-d')
-        );
+        return DB::transaction(function () use ($user, $data) {
+            $preparedData = $this->processRequestData($user, $data);
 
-        if ($overlapping->isNotEmpty()) {
-            throw ValidationException::withMessages([
-                'date' => __('You already have a request for this period.')
-            ]);
-        }
+            $request = $this->leaveRequestRepository->create($preparedData);
 
-        // 2. Munkanapok
-        $daysCount = $this->calculateWorkingDays($startDate, $endDate);
-        
-        if ($daysCount === 0) {
-            throw ValidationException::withMessages([
-                'date' => __('The selected period contains no working days.')
-            ]);
-        }
+            $this->notifyManagerOrAdmins($user, new NewLeaveRequestNotification($request));
 
-        // 3. Keret
-        if ($type === LeaveType::VACATION) {
-            $this->validateLeaveBalance($user, $daysCount, $startDate->year);
-        }
-
-        // --- WARNINGS ---
-        $warnings = [];
-
-        if ($type === LeaveType::HOME_OFFICE) {
-            $hoWarning = $this->checkHomeOfficeLimit($user, $startDate, $endDate);
-            if ($hoWarning) {
-                $warnings[] = $hoWarning;
-            }
-        }
-
-        $deptWarning = $this->checkDepartmentOverlap($user, $startDate, $endDate, $type);
-        if ($deptWarning) {
-            $warnings[] = $deptWarning;
-        }
-
-        $data['user_id'] = $user->id;
-        $data['status'] = LeaveStatus::PENDING->value;
-        $data['days_count'] = $daysCount;
-        
-        if (!empty($warnings)) {
-            $data['has_warning'] = true;
-            $data['warning_message'] = implode(' | ', $warnings);
-        }
-
-        $request = $this->leaveRequestRepository->create($data);
-
-        if ($user->manager) {
-            Log::info('Sending NewLeaveRequestNotification to manager: ' . $user->manager->email);
-            $user->manager->notify(new NewLeaveRequestNotification($request));
-        } else {
-            Log::warning('User ' . $user->email . ' has no manager assigned. Notifying HR/Super Admins.');
-            $recipients = User::role([RoleType::HR->value, RoleType::SUPER_ADMIN->value])
-                                ->where('id', '!=', $user->id)
-                                ->get();
-            Notification::send($recipients, new NewLeaveRequestNotification($request));
-        }
-
-        return $request;
+            return $request;
+        });
     }
 
-    public function updateRequest(User $user, int $id, array $data)
+    /**
+     * Handle the update of an existing leave request.
+     */
+    public function updateRequest(User $user, int $id, array $data): LeaveRequest
     {
-        $request = $this->leaveRequestRepository->find($id);
-
-        if (!$request || $request->user_id !== $user->id) {
-            throw new \Exception(__('Request not found or access denied.'));
-        }
-
-        $startDate = Carbon::parse($data['start_date']);
-        $endDate = Carbon::parse($data['end_date']);
-        $type = LeaveType::from($data['type']);
-        
-        // Múltbeli dátum ellenőrzése (módosításkor is)
-        if ($startDate->isPast() && !$startDate->isToday() && $type !== LeaveType::SICK) {
-            if (!$user->can(PermissionType::CREATE_PAST_LEAVE_REQUESTS->value)) {
-                throw ValidationException::withMessages([
-                    'date' => __('Cannot create leave request for past dates (except sick leave).')
-                ]);
-            }
-        }
-        
-        // Havi zárás ellenőrzése
-        $this->validateMonthlyClosure($request->start_date);
-        if ($request->start_date->month !== $request->end_date->month) {
-            $this->validateMonthlyClosure($request->end_date);
-        }
-        $this->validateMonthlyClosure($startDate);
-        if ($startDate->month !== $endDate->month) {
-            $this->validateMonthlyClosure($endDate);
-        }
-
-        // 1. Átfedés
-        $overlapping = $this->leaveRequestRepository->findOverlapping(
-            $user->id,
-            $startDate->format('Y-m-d'),
-            $endDate->format('Y-m-d'),
-            $id
-        );
-
-        if ($overlapping->isNotEmpty()) {
-            throw ValidationException::withMessages([
-                'date' => __('You already have a request for this period.')
-            ]);
-        }
-
-        // 2. Munkanapok
-        $daysCount = $this->calculateWorkingDays($startDate, $endDate);
-        
-        if ($daysCount === 0) {
-            throw ValidationException::withMessages([
-                'date' => __('The selected period contains no working days.')
-            ]);
-        }
-
-        // 3. Keret
-        if ($type === LeaveType::VACATION) {
-            $this->validateLeaveBalance($user, $daysCount, $startDate->year, $id);
-        }
-
-        // --- WARNINGS ---
-        $warnings = [];
-
-        if ($type === LeaveType::HOME_OFFICE) {
-            $hoWarning = $this->checkHomeOfficeLimit($user, $startDate, $endDate);
-            if ($hoWarning) {
-                $warnings[] = $hoWarning;
-            }
-        }
-
-        $deptWarning = $this->checkDepartmentOverlap($user, $startDate, $endDate, $type, $id);
-        if ($deptWarning) {
-            $warnings[] = $deptWarning;
-        }
-
-        // Adatok frissítése
-        $data['status'] = LeaveStatus::PENDING->value;
-        $data['days_count'] = $daysCount;
-        $data['manager_comment'] = null;
-        $data['approver_id'] = null;
-        
-        if (!empty($warnings)) {
-            $data['has_warning'] = true;
-            $data['warning_message'] = implode(' | ', $warnings);
-        } else {
-            $data['has_warning'] = false;
-            $data['warning_message'] = null;
-        }
-
-        $this->leaveRequestRepository->update($id, $data);
-        
-        // Frissítjük a request objektumot a visszaadáshoz
-        $request->fill($data);
-
-        // Értesítés a Managernek
-        if ($user->manager) {
-            Log::info('Sending NewLeaveRequestNotification (update) to manager: ' . $user->manager->email);
-            $user->manager->notify(new NewLeaveRequestNotification($request));
-        } else {
-            // Ha nincs manager, értesítsük a HR-t és a Super Admint
-            Log::warning('User ' . $user->email . ' has no manager assigned. Notifying HR/Super Admins about update.');
-            $recipients = User::role([RoleType::HR->value, RoleType::SUPER_ADMIN->value])
-                                ->where('id', '!=', $user->id)
-                                ->get();
-            Notification::send($recipients, new NewLeaveRequestNotification($request));
-        }
-
-        return $request;
-    }
-
-    public function approveRequest(int $id, User $approver)
-    {
-        return DB::transaction(function () use ($id, $approver) {
+        return DB::transaction(function () use ($user, $id, $data) {
+            /**
+             * @var LeaveRequest $request
+             */
             $request = $this->leaveRequestRepository->find($id);
 
-            if (!$request) {
-                throw new \Exception(__('Request not found.'));
+            if (!$request || $request->user_id !== $user->id) {
+                throw new \Exception(__('Request not found or access denied.'));
             }
-            
+
+            if ($request->status !== LeaveStatus::PENDING) {
+                throw new \Exception(__('Only pending requests can be updated.'));
+            }
+
+            $preparedData = $this->processRequestData($user, $data, $id);
+
+            // Reset approval fields on update
+            $preparedData['manager_comment'] = null;
+            $preparedData['approver_id'] = null;
+
+            $this->leaveRequestRepository->update($id, $preparedData);
+            $request->refresh();
+
+            $this->notifyManagerOrAdmins($user, new NewLeaveRequestNotification($request), true);
+
+            return $request;
+        });
+    }
+
+    /**
+     * Process validation, calculation, and warnings for request data.
+     */
+    protected function processRequestData(User $user, array $data, ?int $requestId = null): array
+    {
+        [$startDate, $endDate] = $this->parseDates($data['start_date'], $data['end_date']);
+        $type = LeaveType::from($data['type']);
+
+        $this->validatePastDates($user, $startDate, $type);
+        $this->validateMonthlyClosureForRange($startDate, $endDate);
+        $this->validateOverlaps($user, $startDate, $endDate, $requestId);
+
+        $daysCount = $this->calculateWorkingDays($startDate, $endDate);
+        if ($daysCount === 0) {
+            throw ValidationException::withMessages(['date' => __('The selected period contains no working days.')]);
+        }
+
+        if ($type === LeaveType::VACATION) {
+            $this->validateLeaveBalance($user, $daysCount, $startDate->year, $requestId);
+        }
+
+        $warnings = $this->generateWarnings($user, $startDate, $endDate, $type, $requestId);
+
+        return array_merge($data, [
+            'user_id'         => $user->id,
+            'status'          => LeaveStatus::PENDING->value,
+            'days_count'      => $daysCount,
+            'has_warning'     => !empty($warnings),
+            'warning_message' => !empty($warnings) ? implode(' | ', $warnings) : null,
+        ]);
+    }
+
+    public function approveRequest(int $id, User $approver): bool
+    {
+        return DB::transaction(function () use ($id, $approver) {
+            /**
+             * @var LeaveRequest $request
+             */
+            $request = $this->leaveRequestRepository->find($id);
+            $this->ensureRequestExists($request);
             $this->validateMonthlyClosure($request->start_date);
 
-            $this->leaveRequestRepository->updateStatus($request, LeaveStatus::APPROVED->value);
+            $this->leaveRequestRepository->updateStatus($request, LeaveStatus::APPROVED->value, null, $approver->id);
 
             if ($request->type === LeaveType::VACATION) {
                 $this->leaveBalanceRepository->incrementUsed(
@@ -248,68 +133,96 @@ class LeaveRequestService
                     $request->days_count
                 );
             }
-            
-            // Értesítés a dolgozónak
-            Log::info('Sending LeaveRequestApprovedNotification to user: ' . $request->user->email);
+
+            activity()
+                ->performedOn($request)
+                ->causedBy($approver)
+                ->event('approved')
+                ->log('Leave request approved');
+
+            Log::info("Sending LeaveRequestApprovedNotification to user: {$request->user->email}");
             $request->user->notify(new LeaveRequestApprovedNotification($request));
-            
+
             return true;
         });
     }
 
-    public function rejectRequest(int $id, User $approver, string $comment)
+    /**
+     * @throws \Exception
+     */
+    public function rejectRequest(int $id, User $approver, string $comment): bool
     {
+        /**
+         * @var LeaveRequest $request
+         */
         $request = $this->leaveRequestRepository->find($id);
-
-        if (!$request) {
-            throw new \Exception(__('Request not found.'));
-        }
-        
+        $this->ensureRequestExists($request);
         $this->validateMonthlyClosure($request->start_date);
 
-        $updated = $this->leaveRequestRepository->updateStatus($request, LeaveStatus::REJECTED->value, $comment);
-        
-        // Értesítés a dolgozónak
+        $updated = $this->leaveRequestRepository->updateStatus($request, LeaveStatus::REJECTED->value, $comment, $approver->id);
+
         if ($updated) {
-            Log::info('Sending LeaveRequestRejectedNotification to user: ' . $request->user->email);
+            activity()
+                ->performedOn($request)
+                ->causedBy($approver)
+                ->event('rejected')
+                ->withProperties(['comment' => $comment])
+                ->log('Leave request rejected');
+
+            Log::info("Sending LeaveRequestRejectedNotification to user: {$request->user->email}");
             $request->user->notify(new LeaveRequestRejectedNotification($request));
         }
 
         return $updated;
     }
-    
-    public function deleteRequest(int $id, int $userId)
+
+    public function deleteRequest(int $id, int $userId): bool
     {
         $request = $this->leaveRequestRepository->find($id);
-        
+
         if (!$request || $request->user_id !== $userId) {
             throw new \Exception(__('Request not found or access denied.'));
         }
-        
+
         $this->validateMonthlyClosure($request->start_date);
-        
+
         if ($request->status !== LeaveStatus::PENDING) {
             throw new \Exception(__('Only pending requests can be deleted.'));
         }
-        
+
         $this->leaveRequestRepository->delete($id);
 
-        // Értesítés a Managernek vagy HR/Adminnak
-        if ($request->user->manager) {
-            Log::info('Sending LeaveRequestDeletedNotification to manager: ' . $request->user->manager->email);
-            $request->user->manager->notify(new LeaveRequestDeletedNotification($request));
-        } else {
-            Log::warning('User ' . $request->user->email . ' has no manager assigned. Notifying HR/Super Admins about deletion.');
-            $recipients = User::role([RoleType::HR->value, RoleType::SUPER_ADMIN->value])
-                                ->where('id', '!=', $request->user->id)
-                                ->get();
-            Notification::send($recipients, new LeaveRequestDeletedNotification($request));
-        }
-        
+        activity()
+            ->performedOn($request)
+            ->causedBy(auth()->user())
+            ->event('deleted')
+            ->log('Leave request deleted');
+
+        $this->notifyManagerOrAdmins($request->user, new LeaveRequestDeletedNotification($request));
+
         return true;
     }
 
-    protected function validateMonthlyClosure($date)
+    protected function validatePastDates(User $user, Carbon $startDate, LeaveType $type): void
+    {
+        if ($startDate->isPast() && !$startDate->isToday() && $type !== LeaveType::SICK) {
+            if (!$user->can(PermissionType::CREATE_PAST_LEAVE_REQUESTS->value)) {
+                throw ValidationException::withMessages([
+                    'date' => __('Cannot create leave request for past dates (except sick leave).')
+                ]);
+            }
+        }
+    }
+
+    protected function validateMonthlyClosureForRange(Carbon|CarbonImmutable $start, Carbon|CarbonImmutable $end): void
+    {
+        $this->validateMonthlyClosure($start);
+        if ($start->month !== $end->month) {
+            $this->validateMonthlyClosure($end);
+        }
+    }
+
+    protected function validateMonthlyClosure(Carbon|CarbonImmutable $date): void
     {
         if ($this->payrollService->isMonthClosed($date->year, $date->month)) {
             throw ValidationException::withMessages([
@@ -318,83 +231,42 @@ class LeaveRequestService
         }
     }
 
-    protected function checkHomeOfficeLimit(User $user, Carbon $start, Carbon $end): ?string
-    {
-        $limitDays = (int) (Setting::where('key', 'ho_limit_days')->value('value') ?? 1);
-        $limitPeriod = (int) (Setting::where('key', 'ho_limit_period')->value('value') ?? 14);
+    protected function validateOverlaps(
+        User $user,
+        Carbon|CarbonImmutable $start,
+        Carbon|CarbonImmutable $end,
+        ?int $excludeId = null
+    ): void {
+        $overlapping = $this->leaveRequestRepository->findOverlapping(
+            $user->id,
+            $start->format('Y-m-d'),
+            $end->format('Y-m-d'),
+            $excludeId
+        );
 
-        $daysRequested = $start->diffInDays($end) + 1;
-        if ($daysRequested > $limitDays) {
-             return __('Home Office limit exceeded: Only :limit day(s) allowed per request.', ['limit' => $limitDays]);
+        if ($overlapping->isNotEmpty()) {
+            throw ValidationException::withMessages([
+                'date' => __('You already have a request for this period.')
+            ]);
         }
-
-        $checkStart = $start->copy()->subDays($limitPeriod - 1);
-        $checkEnd = $start->copy()->subDay();
-
-        $pastHO = $this->leaveRequestRepository->getForUserInPeriod($user->id, $checkStart->format('Y-m-d'), $checkEnd->format('Y-m-d'))
-            ->where('type', LeaveType::HOME_OFFICE)
-            ->whereIn('status', [LeaveStatus::APPROVED, LeaveStatus::PENDING]);
-
-        $pastDaysCount = $pastHO->sum('days_count');
-
-        if (($pastDaysCount + $daysRequested) > $limitDays) {
-             return __('Home Office limit exceeded: :limit day(s) / :period days.', ['limit' => $limitDays, 'period' => $limitPeriod]);
-        }
-        
-        return null;
-    }
-    
-    protected function checkDepartmentOverlap(User $user, Carbon $start, Carbon $end, LeaveType $type, ?int $excludeId = null): ?string
-    {
-        if (!$user->department_id) {
-            return null;
-        }
-
-        $colleagues = User::where('department_id', $user->department_id)
-            ->where('id', '!=', $user->id)
-            ->pluck('id');
-
-        if ($colleagues->isEmpty()) {
-            return null;
-        }
-
-        $overlaps = \App\Models\LeaveRequest::whereIn('user_id', $colleagues)
-            ->whereIn('status', [LeaveStatus::APPROVED->value, LeaveStatus::PENDING->value])
-            ->where('type', $type->value)
-            ->where(function ($query) use ($start, $end) {
-                $query->where('start_date', '<=', $end->format('Y-m-d'))
-                      ->where('end_date', '>=', $start->format('Y-m-d'));
-            })
-            ->count();
-
-        if ($overlaps > 0) {
-            return __('Department overlap: :count colleague(s) also absent.', ['count' => $overlaps]);
-        }
-
-        return null;
     }
 
-    protected function validateLeaveBalance(User $user, int $daysCount, int $year, ?int $excludeRequestId = null)
+    protected function validateLeaveBalance(User $user, int $daysCount, int $year, ?int $excludeRequestId = null): void
     {
         $balance = $this->leaveBalanceRepository->getBalance($user->id, $year, LeaveType::VACATION->value);
 
         if (!$balance) {
-             throw ValidationException::withMessages([
-                'type' => __('No leave balance found for this year.')
-            ]);
+            throw ValidationException::withMessages(['type' => __('No leave balance found for this year.')]);
         }
 
+        // Calculate pending days excluding the current request being updated
         $pendingRequests = $this->leaveRequestRepository->getForUser($user->id, LeaveStatus::PENDING->value);
-        
-        $pendingDays = 0;
-        foreach ($pendingRequests as $req) {
-            if ($req->type === LeaveType::VACATION && $req->start_date->year === $year) {
-                if ($excludeRequestId && $req->id === $excludeRequestId) {
-                    continue;
-                }
-                $pendingDays += $req->days_count;
-            }
-        }
+
+        $pendingDays = $pendingRequests
+            ->filter(fn ($req) => $req->type === LeaveType::VACATION
+                && $req->start_date->year === $year
+                && (!$excludeRequestId || $req->id !== $excludeRequestId))
+            ->sum('days_count');
 
         $remaining = $balance->allowance - $balance->used - $pendingDays;
 
@@ -405,30 +277,127 @@ class LeaveRequestService
         }
     }
 
-    protected function calculateWorkingDays(Carbon $start, Carbon $end)
+    protected function generateWarnings(User $user, Carbon $start, Carbon $end, LeaveType $type, ?int $excludeId): array
+    {
+        $warnings = [];
+
+        if ($type === LeaveType::HOME_OFFICE) {
+            if ($msg = $this->checkHomeOfficeLimit($user, $start, $end)) {
+                $warnings[] = $msg;
+            }
+        }
+
+        if ($msg = $this->checkDepartmentOverlap($user, $start, $end, $type, $excludeId)) {
+            $warnings[] = $msg;
+        }
+
+        return $warnings;
+    }
+
+    protected function checkHomeOfficeLimit(User $user, Carbon $start, Carbon $end): ?string
+    {
+        $limitDays = (int) (Setting::where('key', 'ho_limit_days')->value('value') ?? 1);
+        $limitPeriod = (int) (Setting::where('key', 'ho_limit_period')->value('value') ?? 14);
+
+        $daysRequested = $start->diffInDays($end) + 1;
+        if ($daysRequested > $limitDays) {
+            return __('Home Office limit exceeded: Only :limit day(s) allowed per request.', ['limit' => $limitDays]);
+        }
+
+        $checkStart = $start->copy()->subDays($limitPeriod - 1);
+        $checkEnd = $start->copy()->subDay();
+
+        $pastDaysCount = $this->leaveRequestRepository
+            ->getForUserInPeriod($user->id, $checkStart->format('Y-m-d'), $checkEnd->format('Y-m-d'))
+            ->where('type', LeaveType::HOME_OFFICE)
+            ->whereIn('status', [LeaveStatus::APPROVED, LeaveStatus::PENDING])
+            ->sum('days_count');
+
+        if (($pastDaysCount + $daysRequested) > $limitDays) {
+            return __('Home Office limit exceeded: :limit day(s) / :period days.', ['limit' => $limitDays, 'period' => $limitPeriod]);
+        }
+
+        return null;
+    }
+
+    protected function checkDepartmentOverlap(User $user, Carbon $start, Carbon $end, LeaveType $type, ?int $excludeId = null): ?string
+    {
+        $userDepartmentIds = $user->departments()->pluck('id');
+
+        if ($userDepartmentIds->isEmpty()) {
+            return null;
+        }
+
+        $colleagueIds = User::whereHas('departments', function ($query) use ($userDepartmentIds) {
+            $query->whereIn('departments.id', $userDepartmentIds);
+        })
+        ->where('id', '!=', $user->id)
+        ->pluck('id');
+
+        if ($colleagueIds->isEmpty()) {
+            return null;
+        }
+
+        $overlaps = LeaveRequest::whereIn('user_id', $colleagueIds)
+            ->whereIn('status', [LeaveStatus::APPROVED->value, LeaveStatus::PENDING->value])
+            ->where('type', $type->value)
+            ->where(function ($query) use ($start, $end) {
+                $query->where('start_date', '<=', $end->format('Y-m-d'))
+                      ->where('end_date', '>=', $start->format('Y-m-d'));
+            })
+            ->when($excludeId, fn($q) => $q->where('id', '!=', $excludeId))
+            ->count();
+
+
+        return $overlaps > 0
+            ? __('Department overlap: :count colleague(s) also absent.', ['count' => $overlaps])
+            : null;
+    }
+
+
+    protected function notifyManagerOrAdmins(User $user, $notification, bool $isUpdate = false): void
+    {
+        $context = $isUpdate ? 'update' : 'creation';
+
+        if ($user->manager) {
+            Log::info("Sending notification ({$context}) to manager: {$user->manager->email}");
+            $user->manager->notify($notification);
+        } else {
+            Log::warning("User {$user->email} has no manager. Notifying HR/Super Admins ({$context}).");
+            $recipients = User::role([RoleType::HR->value, RoleType::SUPER_ADMIN->value])
+                ->where('id', '!=', $user->id)
+                ->get();
+            Notification::send($recipients, $notification);
+        }
+    }
+
+    protected function calculateWorkingDays(Carbon $start, Carbon $end): int
     {
         $holidays = $this->holidayService->getHolidaysInRange($start, $end);
-        $holidayDates = array_keys($holidays);
-        
         $extraWorkdays = $this->holidayService->getExtraWorkdaysInRange($start, $end);
+
+        $holidayDates = array_keys($holidays);
         $extraWorkdayDates = array_keys($extraWorkdays);
 
         return $start->diffInDaysFiltered(function (Carbon $date) use ($holidayDates, $extraWorkdayDates) {
-            $dateStr = $date->format('Y-m-d');
-            
-            $isWeekend = $date->isWeekend();
-            $isHoliday = in_array($dateStr, $holidayDates);
-            $isExtraWorkday = in_array($dateStr, $extraWorkdayDates);
-            
-            if ($isExtraWorkday) {
-                return true;
-            }
-            
-            if ($isHoliday) {
-                return false;
-            }
-            
-            return !$isWeekend;
-        }, $end) + 1;
+                $dateStr = $date->format('Y-m-d');
+
+                if (in_array($dateStr, $extraWorkdayDates)) return true;
+                if (in_array($dateStr, $holidayDates)) return false;
+
+                return !$date->isWeekend();
+            }, $end) + 1;
+    }
+
+    protected function parseDates(string $start, string $end): array
+    {
+        return [Carbon::parse($start), Carbon::parse($end)];
+    }
+
+    protected function ensureRequestExists(?LeaveRequest $request): void
+    {
+        if (!$request) {
+            throw new \Exception(__('Request not found.'));
+        }
     }
 }

@@ -28,19 +28,39 @@
         @forelse($users as $user)
             <flux:card class="flex flex-col items-center text-center p-4">
                 <flux:avatar src="{{ $user->profile_photo_url ?? '' }}" name="{{ $user->name }}" size="lg" class="mb-3" />
+
                 <flux:heading size="md" class="mb-1">{{ $user->name }}</flux:heading>
-                <p class="text-sm text-zinc-500 mb-2">{{ $user->department->name ?? __('No Department') }}</p>
-                <div class="flex gap-2">
+
+                <div class="flex flex-wrap gap-1 justify-center mb-4">
+                    @forelse($user->departments as $dept)
+                        @php
+                            $deptColors = ['indigo', 'fuchsia', 'teal', 'rose', 'cyan', 'amber', 'violet', 'lime', 'sky', 'pink'];
+                            $deptColor = $deptColors[$dept->id % count($deptColors)];
+                        @endphp
+                        <flux:badge inset="top bottom" size="sm" :color="$deptColor">{{ $dept->name }}</flux:badge>
+                    @empty
+                        <p class="text-xs text-zinc-400 italic">{{ __('No Department') }}</p>
+                    @endforelse
+                </div>
+
+                <div class="w-full pt-3 mt-auto border-t border-zinc-100 dark:border-zinc-800 space-y-2">
                     @if($user->email)
-                        <flux:button variant="ghost" size="sm" icon="envelope" href="mailto:{{ $user->email }}" target="_blank" />
+                        <a href="mailto:{{ $user->email }}" class="flex items-center justify-center gap-2 text-sm text-zinc-500 hover:text-indigo-600 transition-colors group">
+                            <flux:icon.envelope variant="micro" class="text-zinc-400 group-hover:text-indigo-500" />
+                            <span class="truncate max-w-45">{{ $user->email }}</span>
+                        </a>
                     @endif
+
                     @if($user->phone)
-                        <flux:button variant="ghost" size="sm" icon="phone" href="tel:{{ $user->phone }}" target="_blank" />
+                        <a href="tel:{{ $user->phone }}" class="flex items-center justify-center gap-2 text-sm text-zinc-500 hover:text-indigo-600 transition-colors group">
+                            <flux:icon.phone variant="micro" class="text-zinc-400 group-hover:text-indigo-500" />
+                            <span>{{ $user->phone }}</span>
+                        </a>
                     @endif
                 </div>
             </flux:card>
         @empty
-            <div class="col-span-full text-center text-zinc-500 py-8">
+            <div class="col-span-full text-center text-zinc-500 py-12 border-2 border-dashed border-zinc-200 rounded-xl">
                 {{ __('No employees found matching your criteria.') }}
             </div>
         @endforelse

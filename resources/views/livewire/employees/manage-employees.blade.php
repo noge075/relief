@@ -112,11 +112,15 @@
                             </div>
                         </flux:table.cell>
                         <flux:table.cell>
-                            @if($user->department)
-                                @php
-                                    $deptColor = $deptColors[$user->department->id % count($deptColors)];
-                                @endphp
-                                <flux:badge size="sm" :color="$deptColor">{{ $user->department->name }}</flux:badge>
+                            @if($user->departments->isNotEmpty())
+                                <div class="flex flex-wrap gap-1">
+                                    @foreach($user->departments as $dept)
+                                        @php
+                                            $deptColor = $deptColors[$dept->id % count($deptColors)];
+                                        @endphp
+                                        <flux:badge size="sm" :color="$deptColor">{{ $dept->name }}</flux:badge>
+                                    @endforeach
+                                </div>
                             @else
                                 -
                             @endif

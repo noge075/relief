@@ -71,14 +71,27 @@
                             @endif
                         </flux:table.cell>
                         <flux:table.cell>
-                            <flux:dropdown>
-                                <flux:button variant="ghost" size="sm" icon="ellipsis-horizontal" />
-                                <flux:menu>
-                                    <flux:menu.item icon="check" wire:click="approve({{ $request->id }})">{{ __('Approve') }}</flux:menu.item>
-                                    <flux:menu.separator />
-                                    <flux:menu.item icon="x-mark" variant="danger" wire:click="openRejectModal({{ $request->id }})">{{ __('Reject') }}</flux:menu.item>
-                                </flux:menu>
-                            </flux:dropdown>
+                            <div class="flex items-center gap-2">
+                                <flux:tooltip content="{{ __('Approve') }}">
+                                    <flux:button
+                                            wire:click="approve({{ $request->id }})"
+                                            icon="check"
+                                            variant="ghost"
+                                            size="sm"
+                                            class="text-green-600 hover:bg-green-100 dark:text-green-400 dark:hover:bg-green-900/30"
+                                    />
+                                </flux:tooltip>
+
+                                <flux:tooltip content="{{ __('Reject') }}">
+                                    <flux:button
+                                            wire:click="openRejectModal({{ $request->id }})"
+                                            icon="x-mark"
+                                            variant="ghost"
+                                            size="sm"
+                                            class="text-red-600 hover:bg-red-100 dark:text-red-400 dark:hover:bg-red-900/30"
+                                    />
+                                </flux:tooltip>
+                            </div>
                         </flux:table.cell>
                     </flux:table.row>
                 @endforeach

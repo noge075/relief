@@ -23,10 +23,17 @@
                     {{ $periodStart->translatedFormat('M d.') }} - {{ $periodEnd->translatedFormat('M d.') }}
                 </div>
                 <div class="flex gap-2">
-                    <flux:button wire:click="today" variant="subtle" size="sm">{{ __('Today') }}</flux:button>
+                    <flux:button wire:click="thisWeek" variant="subtle" size="sm">{{ __('This Week') }}</flux:button>
                     <flux:button icon="chevron-right" wire:click="nextPeriod" variant="ghost" size="sm" />
                 </div>
             </div>
+        </div>
+
+        <!-- Quick Date Filters -->
+        <div class="flex flex-wrap gap-2 justify-center lg:justify-start border-b border-zinc-100 dark:border-zinc-800 pb-4">
+            <flux:button wire:click="previousWeek" variant="subtle" size="sm">{{ __('Previous Week') }}</flux:button>
+            <flux:button wire:click="thisMonth" variant="subtle" size="sm">{{ __('This Month') }}</flux:button>
+            <flux:button wire:click="previousMonth" variant="subtle" size="sm">{{ __('Previous Month') }}</flux:button>
         </div>
 
         <!-- Bottom Row: Filters & Stats -->
@@ -88,7 +95,20 @@
                         <td class="px-4 py-3 font-medium sticky left-0 bg-white dark:bg-zinc-900 z-10 border-r border-zinc-100 dark:border-zinc-800 shadow-sm">
                             <div class="flex items-center gap-2">
                                 <flux:avatar src="{{ $row['user']->profile_photo_url ?? '' }}" name="{{ $row['user']->name }}" size="xs" />
-                                <span class="truncate max-w-30">{{ $row['user']->name }}</span>
+                                <div class="flex flex-col">
+                                    <span class="truncate max-w-30">{{ $row['user']->name }}</span>
+                                    @if($row['user']->departments->isNotEmpty())
+                                        <div class="flex flex-wrap gap-1 mt-1">
+                                            @foreach($row['user']->departments as $dept)
+                                                @php
+                                                    $deptColors = ['indigo', 'fuchsia', 'teal', 'rose', 'cyan', 'amber', 'violet', 'lime', 'sky', 'pink'];
+                                                    $deptColor = $deptColors[$dept->id % count($deptColors)];
+                                                @endphp
+                                                <flux:badge size="xs" :color="$deptColor">{{ $dept->name }}</flux:badge>
+                                            @endforeach
+                                        </div>
+                                    @endif
+                                </div>
                             </div>
                         </td>
                         @foreach($row['days'] as $day)

@@ -9,6 +9,7 @@ use App\Repositories\Contracts\LeaveRequestRepositoryInterface;
 use App\Services\LeaveRequestService;
 use App\Services\HolidayService;
 use Flux\Flux;
+use Illuminate\Support\Collection;
 use Illuminate\Validation\ValidationException;
 use Livewire\Component;
 use Livewire\Attributes\Computed;
@@ -21,14 +22,10 @@ use Carbon\CarbonImmutable;
 class Calendar extends Component
 {
     public $date;
-
-    // Modal vezérléshez
     public $selectedDate = null;
     public $endDate = null;
     public $showRequestModal = false;
     public $editingId = null;
-    
-    // Form mezők
     public $requestType = 'vacation';
     public $reason = '';
 
@@ -43,9 +40,19 @@ class Calendar extends Component
         $this->holidayService = $holidayService;
     }
 
-    public function mount()
+    public function mount(): void
     {
         $this->date = CarbonImmutable::now()->startOfMonth()->format('Y-m-d');
+        $this->dispatchDateRangeSelected();
+    }
+
+    private function dispatchDateRangeSelected(): void
+    {
+        $currentMonth = Carbon::parse($this->date);
+        $this->dispatch('date-range-selected', 
+            startDate: $currentMonth->startOfMonth()->format('Y-m-d'), 
+            endDate: $currentMonth->endOfMonth()->format('Y-m-d')
+        );
     }
 
     public function placeholder()
@@ -53,24 +60,25 @@ class Calendar extends Component
         return view('livewire.placeholders.calendar');
     }
 
-    // --- Navigáció ---
-    public function nextMonth()
+    public function nextMonth(): void
     {
         $this->date = CarbonImmutable::parse($this->date)->addMonth()->format('Y-m-d');
+        $this->dispatchDateRangeSelected();
     }
 
-    public function prevMonth()
+    public function prevMonth(): void
     {
         $this->date = CarbonImmutable::parse($this->date)->subMonth()->format('Y-m-d');
+        $this->dispatchDateRangeSelected();
     }
 
-    public function jumpToToday()
+    public function jumpToToday(): void
     {
         $this->date = CarbonImmutable::now()->startOfMonth()->format('Y-m-d');
+        $this->dispatchDateRangeSelected();
     }
 
-    // --- Interakció ---
-    public function selectDate($dateStr)
+    public function selectDate($dateStr): void
     {
         $this->selectedDate = $dateStr;
         $this->endDate = $dateStr;
@@ -81,7 +89,7 @@ class Calendar extends Component
     }
 
     #[Computed]
-    public function calendarDays()
+    public function calendarDays(): Collection
     {
         $currentMonth = CarbonImmutable::parse($this->date);
         $startOfGrid = $currentMonth->startOfWeek(Carbon::MONDAY);
@@ -137,7 +145,7 @@ class Calendar extends Component
     }
 
     #[Computed]
-    public function monthlyStats()
+    public function monthlyStats(): array
     {
         $days = $this->calendarDays->where('is_current_month', true);
 
@@ -148,7 +156,7 @@ class Calendar extends Component
         ];
     }
     
-    public function getHoStats()
+    public function getHoStats(): array
     {
         $limitDays = (int) (Setting::where('key', 'ho_limit_days')->value('value') ?? 1);
         $limitPeriod = (int) (Setting::where('key', 'ho_limit_period')->value('value') ?? 14);
@@ -170,24 +178,25 @@ class Calendar extends Component
         ];
     }
 
-    public function jumpToDate($year, $month)
+    public function jumpToDate($year, $month): void
     {
         $this->date = CarbonImmutable::createFromDate($year, $month, 1)->format('Y-m-d');
+        $this->dispatchDateRangeSelected();
     }
 
     #[Computed]
-    public function currentYear()
+    public function currentYear(): int
     {
         return Carbon::parse($this->date)->year;
     }
 
     #[Computed]
-    public function currentMonth()
+    public function currentMonth(): int
     {
         return Carbon::parse($this->date)->month;
     }
 
-    public function editEvent($eventId)
+    public function editEvent($eventId): void
     {
         $this->editingId = $eventId;
         $event = $this->leaveRequestRepository->find($eventId);
@@ -201,7 +210,7 @@ class Calendar extends Component
         }
     }
 
-    public function saveEvent(LeaveRequestService $leaveRequestService)
+    public function saveEvent(LeaveRequestService $leaveRequestService): void
     {
         try {
             $this->validate([
@@ -210,8 +219,6 @@ class Calendar extends Component
                 'endDate' => 'required|date|after_or_equal:selectedDate',
                 'reason' => 'nullable|string|max:255',
             ]);
-
-            $request = null;
 
             if ($this->editingId) {
                 $request = $leaveRequestService->updateRequest(auth()->user(), $this->editingId, [
@@ -244,7 +251,7 @@ class Calendar extends Component
         }
     }
 
-    public function deleteEvent($id, LeaveRequestService $leaveRequestService)
+    public function deleteEvent($id, LeaveRequestService $leaveRequestService): void
     {
         try {
             $leaveRequestService->deleteRequest($id, auth()->id());
@@ -257,7 +264,7 @@ class Calendar extends Component
     }
     
     #[Computed]
-    public function canDelete()
+    public function canDelete(): bool
     {
         if (!$this->editingId) {
             return false;
@@ -268,10 +275,7 @@ class Calendar extends Component
     }
     
     #[On('leave-request-updated')]
-    public function refresh()
-    {
-        // Csak újrarenderelést vált ki
-    }
+    public function refresh() {}
 
     public function render()
     {

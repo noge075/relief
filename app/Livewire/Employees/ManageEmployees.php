@@ -41,7 +41,7 @@ class ManageEmployees extends Component
     public $first_name = '';
     public $email = '';
     public $password = '';
-    public $department_id = null;
+    public $selectedDepartmentIds = [];
     public $work_schedule_id = null;
     public $employment_type = null;
     public $role;
@@ -187,10 +187,6 @@ class ManageEmployees extends Component
             return true;
         }
 
-        if ($currentUser->can(PermissionType::VIEW_USERS->value) && $targetUser->manager_id === $currentUser->id) {
-            return true;
-        }
-
         return false;
     }
 
@@ -248,7 +244,7 @@ class ManageEmployees extends Component
         $this->last_name = $user->last_name;
         $this->first_name = $user->first_name;
         $this->email = $user->email;
-        $this->department_id = $user->department_id;
+        $this->selectedDepartmentIds = $user->departments->pluck('id')->toArray();
         $this->work_schedule_id = $user->work_schedule_id;
         $this->employment_type = $user->employment_type?->value;
         $this->role = $user->roles->first()?->name ?? null;
@@ -280,7 +276,8 @@ class ManageEmployees extends Component
             'last_name' => 'required|min:2',
             'first_name' => 'required|min:2',
             'email' => 'required|email|unique:users,email,' . ($this->editingId ?? 'NULL'),
-            'department_id' => 'nullable|exists:departments,id',
+            'selectedDepartmentIds' => 'nullable|array',
+            'selectedDepartmentIds.*' => 'exists:departments,id',
             'work_schedule_id' => 'nullable|exists:work_schedules,id',
             'employment_type' => 'required',
             'role' => 'required|exists:roles,name',
@@ -301,6 +298,7 @@ class ManageEmployees extends Component
         $validated = $this->validate($rules);
 
         $validated['permissions'] = $this->selectedPermissions;
+        $validated['departments'] = $this->selectedDepartmentIds;
 
         if ($this->isEditing) {
             $userService->updateEmployee($this->editingId, $validated);
@@ -371,7 +369,7 @@ class ManageEmployees extends Component
     {
         $this->reset([
             'last_name', 'first_name', 'email', 'password',
-            'department_id', 'work_schedule_id', 'employment_type', 'role',
+            'selectedDepartmentIds', 'work_schedule_id', 'employment_type', 'role',
             'editingId', 'selectedPermissions',
             'id_card_number', 'tax_id', 'ssn', 'address', 'phone',
             'documentUpload', 'userDocuments'
