@@ -1,0 +1,224 @@
+Óbudai Egyetem Nonprofit Kft. Jelenlét nyilvántartás
+
+Tartalom
+1) Cél és kontextus	2
+2) Felhasználói szerepkörök és jogosultságok (RBAC)	2
+2.1 Szerepkörök	2
+2.2 Jogosultsági elvek	2
+3) Dolgozói csoportok és szabályok	3
+3.1 Csoportok	3
+3.2 HO szabály	3
+4) Funkcionális követelmények	3
+4.1 Valós idejû státusz-tábla (“Ki hol van?”)	3
+4.2 Igénylés és jóváhagyás (szabadság, HO)	4
+4.3 Keretszámlálók (kivett / marad)	4
+4.4 Havi Excel export (vezetõ/HR/payroll)	4
+4.5 Dolgozói havi jelenléti ív generálás (print + aláírás)	5
+4.6 “Havi zárás” és adatátadás bérszámfejtõnek	5
+5) Adatmodell javaslat (minimálisan szükséges entitások)	5
+5.1 Employee	5
+5.2 CalendarEvent / AbsenceRequest	5
+5.3 WorkScheduleTemplate (diák / részmunka)	6
+5.4 MonthlyClose	6
+5.5 Document (feltöltött jelenléti ív)	6
+6) Számítási logika (egyértelmûsítések)	6
+7) UI/UX vázlat (minimálisan elvárt képernyõk)	6
+8) MVP javaslat (gyors indulás) vs. V1 bõvítés	7
+MVP (V1)	7
+V2	7
+9) Elfogadási kritériumok (példák)	7
+
+
+
+
+1) Cél és kontextus
+Cél: jelenléti és távolléti (szabadság, betegszabadság, HO) nyilvántartás egységesítése úgy, hogy
+1. vezetõi szinten valós idejû státusz-tábla legyen (“ki hol van”),
+2. havi szinten Excel export, mindenkire (szabad napok, beteg napok, ledolgozott napok),
+3. dolgozói oldalon havi jelenléti ív generálás/nyomtatás (dátum | jelölés | aláírás), majd feltöltés,
+4. szabadságkeret számlálók (kivett / még rendelkezésre áll),
+5. jóváhagyási workflow (szabadság + home office),
+6. bérszámfejtõ felé konzisztens átadás.
+Jelenlegi állapot: közös Excel (mindenki mindent lát), dolgozók csak szabi/beteg rögzítést végeznek felületesen, Excel számol keretet.
+Csoportok:
+1. munkaviszonyos munkavállalók kb. 50 fõ 
+2. megbízási szerzõdéssel foglalkoztatottak, órabér alapúak kb. 10 fõ 
+3. megbízási szerzõdéssel foglalkoztattotak, fix béresek 
+4. diák kb. 10 fõ
+
+2) Felhasználói szerepkörök és jogosultságok (RBAC)
+2.1 Szerepkörök
+* Munkavállaló (Employee)
+o Saját távollét/HO igény beadás
+o Saját havi jelenléti ív generálás és letöltés
+o Saját keretek és saját naptár megtekintése
+* Közvetlen vezetõ (Manager)
+o Beosztottak igényeinek jóváhagyása/elutasítása
+o Csapat státusz és csapat havi riport export
+* HR / Admin
+o Dolgozók felvétele, csoport/keret beállítás
+o Különleges típusok kezelése (pl. fix munkarendû diák, egyedi kedvezmények)
+o Szabályok (pl.: HO 2 hetente 1 nap) paraméterezése
+* Bérszámfejtõ 
+o Havi zárás utáni export letöltése (módosítás nélkül)
+* Vezetõi nézet (Executive)
+o Valós idejû státusz tábla (összes / szûrhetõ)
+o Aggregált kimutatások (havi)
+2.2 Jogosultsági elvek
+* Mindenki alapból csak a saját adatait látja, kivéve:
+o Közvetlen vezetõ a saját csapatát,
+o HR/Payroll a teljes állományt,
+o Vezetõi státuszfal csak státusz-szintû legyen (ne lássa mindenki mindenki kérelmének részleteit).
+
+3) Dolgozói csoportok és szabályok
+3.1 Csoportok
+1. Munkaviszony (kb. 50 fõ) – nap alapú jelenlét, szabadságkeret
+2. Megbízás / órabér (kb. 10 fõ) – nap alapú jelenlét + opcionális órák rögzítése (MVP-ben elég a “dolgozott nap”, késõbb “dolgozott óra”)
+3. Megbízás / fix (4 fõ) – inkább “naptári jelenlét” + távollétek
+4. Diák (10 fõ) – részben fix napok (munkarend minta), plusz jelenlét
+3.2 HO szabály
+* Alapszabály: 2 hetente 1 nap HO / fõ (paraméterezhetõ)
+* A rendszernek tudnia kell:
+o mi számít “2 hétnek” (ISO week alapú / gördülõ 14 nap) ? javaslat: gördülõ 14 nap, egyszerû és igazságos
+o HO igény beadásakor validál, túllépés esetén:
+* vagy tilt,
+* vagy “vezetõi felülbírálatra” enged.
+
+4) Funkcionális követelmények
+4.1 Valós idejû státusz-tábla (“Ki hol van?”)
+Nézet: lista / tábla, szûrhetõ: szervezeti egység, csapat, csoport (1–4), dátum.
+Státuszok (színkód példa):
+* Zöld – “Elérhetõ / bent” (alapértelmezett)
+* Kék – “Home office”
+* Sárga – “Szabadság”
+* Piros – “Beteg”
+* Szürke – “Nem munkanap / fixen nem jön” (pl. diák fix rend szerint)
+Logika:
+* Alapértelmezés: munkanapon “bent”
+* Ha adott napra van jóváhagyott esemény: felülírja (szabi, beteg, HO)
+* Diákoknál a munkarend-minta (fix napok) állítja a defaultot (pl. kedd-csütörtök zöld, többi szürke)
+4.2 Igénylés és jóváhagyás (szabadság, HO)
+Folyamat (szabadság):
+1. Employee kiválasztja: dátum(ok) (tól–ig), típus (szabi / beteg), megjegyzés (opcionális)
+2. Rendszer elõvalidál: keret, átfedés, szabályok
+3. Ütközés esetén: “Warning + Manager override” opció (ha azonos területen dolgozó kollégának már van engedélyezett szabadsága, arra az idõszakra)
+4. “Pending” állapot ? Manager értesítés
+5. Manager: approve / reject + komment
+6. Approved esetén bekerül a naptárba és a státusz táblába
+7. Audit log mentés
+Folyamat (HO):
+* Ugyanez, csak HO-limit validációval (2 hetente 1 nap; gördülõ 14 nap)
+* Túllépés esetén: “Warning + Manager override” opció
+* Esetleg szintén hibaüzenet, ha azonos területen már engedélyezettt a HO.
+4.3 Keretszámlálók (kivett / marad)
+Minden dolgozónál látszódjon:
+* Éves szabadságkeret (alap + pótszabadság, ha van) – HR tölti / szinkronból jön
+* Kivett szabadság (nap) – jóváhagyott szabadság eseményekbõl
+* Maradék – keret – kivett
+* Beteg külön számláló (nem keretbõl fogy, de riport kell)
+Órabér alapú megbízásisoknál és diákoknál csak az adott napon érkezés és távozás megadás.
+Általuk megadott fix napok, berögzítése, amikor nincsenek.
+4.4 Havi Excel export (vezetõ/HR/payroll)
+Minimum oszlopok (havi bontásban, dolgozónként):
+* Dolgozó azonosító (név + belsõ ID)
+* Csoport (1–4)
+* Hónap
+* Szabadság napok száma (approved)
+* Beteg napok száma (approved)
+* Ledolgozott munkanapok száma
+o számítás: munkanapok – (szabadság + beteg + egyéb távollét)
+o HO dolgozott napnak számít (külön jelölhetõ)
+* HO napok száma
+Export formátum:
+* .xlsx (strukturált táblával)
+* 1 sheet: “Summary”
+* (opcionális) 2. sheet: “Daily” napi szintû bontás (dátum, státusz)
+4.5 Dolgozói havi jelenléti ív generálás (print + aláírás)
+Funkció:
+* Employee kiválasztja hónap ? rendszer generál PDF-et (vagy docx-t)
+* Tartalom:
+o Fejléc: név, szervezeti egység, hónap, év
+o Táblázat: Dátum | Jelölés (Szabadság/Betegség/HO/…) | Aláírás
+o Aláírás mezõ a sorokban, vagy alul “összesítõ aláírás”
+* Letöltés ? dolgozó kinyomtatja, aláírja, beszkenneli ? feltölti 
+* Feltöltés célhelye: SharePoint Jelenléti mappa , adott hónap 
+Megjegyzés: minden egyes munkanap aláírása szükséges, kézzel. 
+4.6 “Havi zárás” és adatátadás bérszámfejtõnek
+* HR/Payroll indít egy Month Close mûveletet:
+o hónap = “lezárt”
+o utólagos módosítás csak “reopen” jogosultsággal és audit trail-lel
+* Payroll letölti az exportot + opcionális “változáslista” (ki mit módosított lezárás elõtt)
+
+5) Adatmodell javaslat (minimálisan szükséges entitások)
+5.1 Employee
+* employee_id (belsõ)
+* név, email
+* csoport (1–4)
+* szervezeti egység / csapat
+* manager_id
+* munkarend-minta (különösen diákokhoz)
+* éves szabadságkeret (év, nap)
+5.2 CalendarEvent / AbsenceRequest
+* event_id
+* employee_id
+* dátum_tól, dátum_ig (vagy dátum + ismétlõdõ)
+* típus: vacation / sick / home_office / other
+* állapot: pending / approved / rejected / cancelled
+* approver_id
+* created_at, approved_at
+* megjegyzés
+* audit mezõk
+5.3 WorkScheduleTemplate (diák / részmunka)
+* template_id
+* employee_id vagy csoporthoz rendelve
+* heti minta (hétfõ–vasárnap: working/non-working)
+* érvényesség (tól–ig)
+5.4 MonthlyClose
+* month (YYYY-MM)
+* status (open/closed)
+* closed_by, closed_at
+5.5 Document (feltöltött jelenléti ív)
+* doc_id
+* employee_id
+* month
+* fájl elérési út / storage reference
+* uploaded_at
+
+6) Számítási logika (egyértelmûsítések)
+* “Ledolgozott munkanap”: adott hónapban a munkanapok száma (naptár + munkarend) mínusz jóváhagyott távollétek (szabi, beteg, egyéb).
+* HO: dolgozott napnak számít, de külön is kimutatható.
+* Átfedéskezelés: egy napra egy “fõ státusz” engedélyezett (pl. nem lehet egyszerre HO és szabadság). Ha mégis, rendszer blokkolja.
+* Státuszfal default:
+o munkaviszony: munkanapon zöld,
+o diák: sablon szerint zöld/szürke,
+o megbízás: beállítható (default zöld, vagy sablon).
+
+7) UI/UX vázlat (minimálisan elvárt képernyõk)
+1. Dashboard – Státuszfal (vezetõi)
+2. Saját naptár + igénylés
+3. Vezetõi jóváhagyási inbox
+4. Keretek nézet (saját / HR összes)
+5. Riportok / Export (havi)
+6. Jelenléti ív generálás + feltöltés
+7. Admin beállítások (munkarend, HO szabály, keretek)
+
+8) MVP javaslat (gyors indulás) vs. V1 bõvítés
+MVP (V1)
+* Csoport 1 + 2 kezelése
+* Státuszfal (szabi, beteg, HO)
+* Igénylés + vezetõi jóváhagyás
+* Havi export (3 fõ adat + HO opcionális)
+* Keretszámláló (csoport 1 biztosan)
+* Havi jelenléti ív generálás (PDF) + feltöltés
+V2 
+* Csoport 3–4 teljes modell (fix megbízás, diák sablonok)
+* Órabéres megbízásnál órarögzítés és payroll kompatibilis export
+* SSO / jogosultság szinkron (ha van M365/Azure AD)
+
+9) Elfogadási kritériumok (példák)
+* Egy adott napon a vezetõ 1 kattintással látja a csapatából: bent/HO/szabi/beteg/nem munkanap állapotot.
+* Egy dolgozó bead egy szabadságigényt ? vezetõ jóváhagyja ? a státuszfal és a keretszámláló frissül.
+* Havi exportban helyesen szerepel a három szám (szabi nap, beteg nap, ledolgozott nap) legalább 2 teszt dolgozóra.
+* A dolgozó le tudja tölteni a havi jelenléti ívét, és fel tudja tölteni a aláírt verziót.
+
+
