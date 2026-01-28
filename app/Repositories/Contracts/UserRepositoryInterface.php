@@ -20,4 +20,10 @@ interface UserRepositoryInterface extends BaseRepositoryInterface
     
     // Visszaadja azokat a felhasználókat, akiknek nincs szabadságkerete az adott évre
     public function getUsersWithoutLeaveBalance(int $year): Collection;
+
+    // Visszaadja az összes aktív felhasználót, név szerint rendezve
+    public function getAllActiveOrderedByName(): Collection;
+
+    // Visszaadja a felhasználókat ID-k alapján
+    public function getByIds(array $ids): Collection;
 }

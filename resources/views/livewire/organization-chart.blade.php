@@ -35,63 +35,77 @@
     </div>
 
     <flux:card>
-        <div
-            class="space-y-4"
-            x-data="{
-                initSortable(el) {
-                    new Sortable(el, {
-                        group: 'nested',
-                        animation: 150,
-                        fallbackOnBody: true,
-                        swapThreshold: 0.65,
-                        onEnd: (evt) => {
-                            let itemEl = evt.item;
-                            let newParentEl = itemEl.closest('[data-user-id]');
-                            let newManagerId = newParentEl ? newParentEl.dataset.userId : 'root';
-                            let userId = itemEl.dataset.id;
+        @can(\App\Enums\PermissionType::EDIT_USERS->value)
+            <div
+                class="space-y-4"
+                x-data="{
+                    initSortable(el) {
+                        new Sortable(el, {
+                            group: 'nested',
+                            animation: 150,
+                            fallbackOnBody: true,
+                            swapThreshold: 0.65,
+                            onEnd: (evt) => {
+                                let itemEl = evt.item;
+                                let newParentEl = itemEl.closest('[data-user-id]');
+                                let newManagerId = newParentEl ? newParentEl.dataset.userId : 'root';
+                                let userId = itemEl.dataset.id;
 
-                            if (evt.to === evt.from && evt.newIndex === evt.oldIndex) return;
+                                if (evt.to === evt.from && evt.newIndex === evt.oldIndex) return;
 
-                            $wire.updateManager(userId, newManagerId);
-                        }
-                    });
-                }
-            }"
-            x-init="initSortable($el)"
-        >
-            @forelse($tree as $rootUser)
-                <div data-id="{{ $rootUser->id }}">
-                    <x-org-tree-node :user="$rootUser" />
-                </div>
-            @empty
-                <p class="text-zinc-500">{{ __('No users found.') }}</p>
-            @endforelse
-        </div>
+                                $wire.updateManager(userId, newManagerId);
+                            }
+                        });
+                    }
+                }"
+                x-init="initSortable($el)"
+            >
+                @forelse($tree as $rootUser)
+                    <div data-id="{{ $rootUser->id }}">
+                        <x-org-tree-node :user="$rootUser" />
+                    </div>
+                @empty
+                    <p class="text-zinc-500">{{ __('No users found.') }}</p>
+                @endforelse
+            </div>
+        @else
+            <div class="space-y-4">
+                @forelse($tree as $rootUser)
+                    <div data-id="{{ $rootUser->id }}">
+                        <x-org-tree-node :user="$rootUser" />
+                    </div>
+                @empty
+                    <p class="text-zinc-500">{{ __('No users found.') }}</p>
+                @endforelse
+            </div>
+        @endcan
     </flux:card>
 
-    <!-- Edit Modal -->
-    <flux:modal wire:model="showEditModal" class="min-w-100">
-        <div class="space-y-6">
-            <div>
-                <flux:heading size="lg">{{ __('Edit Manager') }}</flux:heading>
-                <flux:subheading>{{ __('Select a new manager for the employee.') }}</flux:subheading>
-            </div>
+    @can(\App\Enums\PermissionType::EDIT_USERS->value)
+        <!-- Edit Modal -->
+        <flux:modal wire:model="showEditModal" class="min-w-100">
+            <div class="space-y-6">
+                <div>
+                    <flux:heading size="lg">{{ __('Edit Manager') }}</flux:heading>
+                    <flux:subheading>{{ __('Select a new manager for the employee.') }}</flux:subheading>
+                </div>
 
-            <div class="grid gap-4">
-                <flux:select wire:model="selectedManagerId" label="{{ __('Manager') }}">
-                    <flux:select.option value="">{{ __('No Manager') }}</flux:select.option>
-                    @foreach($allUsers as $user)
-                        @if($user->id !== $selectedUserId)
-                            <flux:select.option value="{{ $user->id }}">{{ $user->name }}</flux:select.option>
-                        @endif
-                    @endforeach
-                </flux:select>
-            </div>
+                <div class="grid gap-4">
+                    <flux:select wire:model="selectedManagerId" label="{{ __('Manager') }}">
+                        <flux:select.option value="">{{ __('No Manager') }}</flux:select.option>
+                        @foreach($allUsers as $user)
+                            @if($user->id !== $selectedUserId)
+                                <flux:select.option value="{{ $user->id }}">{{ $user->name }}</flux:select.option>
+                            @endif
+                        @endforeach
+                    </flux:select>
+                </div>
 
-            <div class="flex justify-end gap-2">
-                <flux:button wire:click="$set('showEditModal', false)" variant="ghost">{{ __('Cancel') }}</flux:button>
-                <flux:button wire:click="saveManager" variant="primary">{{ __('Save') }}</flux:button>
+                <div class="flex justify-end gap-2">
+                    <flux:button wire:click="$set('showEditModal', false)" variant="ghost">{{ __('Cancel') }}</flux:button>
+                    <flux:button wire:click="saveManager" variant="primary">{{ __('Save') }}</flux:button>
+                </div>
             </div>
-        </div>
-    </flux:modal>
+        </flux:modal>
+    @endcan
 </div>

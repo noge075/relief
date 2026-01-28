@@ -4,7 +4,6 @@ namespace App\Livewire;
 
 use App\Enums\LeaveStatus;
 use App\Enums\LeaveType;
-use App\Models\Setting;
 use App\Repositories\Contracts\LeaveRequestRepositoryInterface;
 use App\Services\LeaveRequestService;
 use App\Services\HolidayService;
@@ -155,28 +154,6 @@ class Calendar extends Component
             'requests' => $days->whereNotNull('event')->count(),
         ];
     }
-    
-    public function getHoStats(): array
-    {
-        $limitDays = (int) (Setting::where('key', 'ho_limit_days')->value('value') ?? 1);
-        $limitPeriod = (int) (Setting::where('key', 'ho_limit_period')->value('value') ?? 14);
-        
-        // Havi statisztika
-        $startOfMonth = Carbon::parse($this->date)->startOfMonth();
-        $endOfMonth = Carbon::parse($this->date)->endOfMonth();
-        
-        $monthlyHO = $this->leaveRequestRepository->getForUserInPeriod(auth()->id(), $startOfMonth->format('Y-m-d'), $endOfMonth->format('Y-m-d'))
-            ->where('type', LeaveType::HOME_OFFICE)
-            ->whereIn('status', [LeaveStatus::APPROVED, LeaveStatus::PENDING]);
-            
-        $monthlyUsed = $monthlyHO->sum('days_count');
-        
-        return [
-            'monthly_used' => $monthlyUsed,
-            'limit' => $limitDays,
-            'period' => $limitPeriod,
-        ];
-    }
 
     public function jumpToDate($year, $month): void
     {
@@ -279,8 +256,6 @@ class Calendar extends Component
 
     public function render()
     {
-        return view('livewire.calendar', [
-            'hoStats' => $this->getHoStats()
-        ]);
+        return view('livewire.calendar');
     }
 }

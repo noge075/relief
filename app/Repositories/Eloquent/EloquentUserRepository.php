@@ -22,7 +22,7 @@ class EloquentUserRepository extends BaseRepository implements UserRepositoryInt
 
     public function getSubordinatesPaginated(int $managerId, int $perPage = 10, array $filters = [], string $sortCol = 'name', bool $sortAsc = true): LengthAwarePaginator
     {
-        $query = $this->model->with(['departments', 'roles'])
+        $query = $this->model->with(['departments', 'roles', 'homeOfficePolicy'])
             ->where('manager_id', $managerId);
 
         $this->applyFilters($query, $filters);
@@ -39,7 +39,7 @@ class EloquentUserRepository extends BaseRepository implements UserRepositoryInt
 
     public function getPaginated(int $perPage = 10, array $filters = [], string $sortCol = 'name', bool $sortAsc = true): LengthAwarePaginator
     {
-        $query = $this->model->with(['departments', 'roles']);
+        $query = $this->model->with(['departments', 'roles', 'homeOfficePolicy']);
 
         $this->applyFilters($query, $filters);
 
@@ -86,6 +86,10 @@ class EloquentUserRepository extends BaseRepository implements UserRepositoryInt
         if (!empty($filters['work_schedule_id'])) {
             $query->where('work_schedule_id', $filters['work_schedule_id']);
         }
+
+        if (!empty($filters['home_office_policy_id'])) {
+            $query->where('home_office_policy_id', $filters['home_office_policy_id']);
+        }
     }
 
     public function syncRoles(User $user, array $roles): void
@@ -106,5 +110,18 @@ class EloquentUserRepository extends BaseRepository implements UserRepositoryInt
         })
         ->orderBy('last_name')
         ->get();
+    }
+
+    public function getAllActiveOrderedByName(): Collection
+    {
+        return $this->model->where('is_active', true)
+            ->orderBy('last_name')
+            ->orderBy('first_name')
+            ->get();
+    }
+
+    public function getByIds(array $ids): Collection
+    {
+        return $this->model->whereIn('id', $ids)->get();
     }
 }

@@ -90,6 +90,12 @@ class StatusBoard extends Component
         $this->endDate = Carbon::now()->subWeek()->endOfWeek()->format('Y-m-d');
     }
 
+    public function nextWeek()
+    {
+        $this->startDate = Carbon::now()->addWeek()->startOfWeek()->format('Y-m-d');
+        $this->endDate = Carbon::now()->addWeek()->endOfWeek()->format('Y-m-d');
+    }
+
     public function thisMonth()
     {
         $this->startDate = Carbon::now()->startOfMonth()->format('Y-m-d');
@@ -100,6 +106,12 @@ class StatusBoard extends Component
     {
         $this->startDate = Carbon::now()->subMonth()->startOfMonth()->format('Y-m-d');
         $this->endDate = Carbon::now()->subMonth()->endOfMonth()->format('Y-m-d');
+    }
+
+    public function nextMonth()
+    {
+        $this->startDate = Carbon::now()->addMonth()->startOfMonth()->format('Y-m-d');
+        $this->endDate = Carbon::now()->addMonth()->endOfMonth()->format('Y-m-d');
     }
 
     public function clearFilters()
@@ -121,7 +133,6 @@ class StatusBoard extends Component
 
         $matrix = $this->statusBoardService->getStatusMatrix(auth()->user(), $start, $end, $filters);
 
-        // Statisztika számítása a megjelenített időszakra
         $stats = [
             'pending' => 0,
             'approved' => 0,

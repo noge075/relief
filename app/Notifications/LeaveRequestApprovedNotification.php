@@ -25,10 +25,11 @@ class LeaveRequestApprovedNotification extends Notification implements ShouldQue
     {
         $start = $this->leaveRequest->start_date->format('Y-m-d');
         $end = $this->leaveRequest->end_date->format('Y-m-d');
+        $type = $this->leaveRequest->type->label();
 
         return (new MailMessage)
             ->subject(__('Leave Request Approved'))
-            ->line(__('Your leave request has been approved.'))
+            ->line(__('Your :type request has been approved.', ['type' => $type]))
             ->line(__('Date: :start to :end', ['start' => $start, 'end' => $end]))
             ->action(__('View My Requests'), route('my-requests.index'));
     }
@@ -37,10 +38,12 @@ class LeaveRequestApprovedNotification extends Notification implements ShouldQue
     {
         $start = $this->leaveRequest->start_date->format('Y-m-d');
         $end = $this->leaveRequest->end_date->format('Y-m-d');
+        $type = $this->leaveRequest->type->label();
 
         return [
             'title' => __('Leave Request Approved'),
-            'message' => __('Your leave request from :start to :end has been approved.', [
+            'message' => __('Your :type request from :start to :end has been approved.', [
+                'type' => $type,
                 'start' => $start,
                 'end' => $end,
             ]),

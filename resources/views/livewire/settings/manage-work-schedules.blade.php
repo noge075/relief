@@ -19,6 +19,7 @@
             <flux:table.columns>
                 <flux:table.column sortable :sorted="$sortCol === 'name'" :direction="$sortAsc ? 'asc' : 'desc'" wire:click="sortBy('name')">{{ __('Name') }}</flux:table.column>
                 <flux:table.column>{{ __('Weekly Hours') }}</flux:table.column>
+                <flux:table.column>{{ __('Work Time') }}</flux:table.column>
                 <flux:table.column>{{ __('Weekly Pattern') }}</flux:table.column>
                 <flux:table.column>{{ __('Actions') }}</flux:table.column>
             </flux:table.columns>
@@ -29,6 +30,13 @@
                         <flux:table.cell class="font-medium">{{ $schedule->name }}</flux:table.cell>
                         <flux:table.cell>
                             {{ array_sum($schedule->weekly_pattern) }} {{ __('h') }}
+                        </flux:table.cell>
+                        <flux:table.cell>
+                            @if($schedule->start_time && $schedule->end_time)
+                                {{ \Carbon\Carbon::parse($schedule->start_time)->format('H:i') }} - {{ \Carbon\Carbon::parse($schedule->end_time)->format('H:i') }}
+                            @else
+                                -
+                            @endif
                         </flux:table.cell>
                         <flux:table.cell>
                             <div class="flex gap-1">
@@ -101,6 +109,11 @@
 
             <div class="grid gap-4">
                 <flux:input wire:model="name" label="{{ __('Name') }}" />
+
+                <div class="grid grid-cols-2 gap-4">
+                    <flux:input wire:model="start_time" type="time" label="{{ __('Start Time') }}" />
+                    <flux:input wire:model="end_time" type="time" label="{{ __('End Time') }}" />
+                </div>
 
                 <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
                     @foreach(['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as $day)

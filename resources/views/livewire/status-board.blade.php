@@ -32,8 +32,10 @@
         <!-- Quick Date Filters -->
         <div class="flex flex-wrap gap-2 justify-center lg:justify-start border-b border-zinc-100 dark:border-zinc-800 pb-4">
             <flux:button wire:click="previousWeek" variant="subtle" size="sm">{{ __('Previous Week') }}</flux:button>
+            <flux:button wire:click="nextWeek" variant="subtle" size="sm">{{ __('Next Week') }}</flux:button>
             <flux:button wire:click="thisMonth" variant="subtle" size="sm">{{ __('This Month') }}</flux:button>
             <flux:button wire:click="previousMonth" variant="subtle" size="sm">{{ __('Previous Month') }}</flux:button>
+            <flux:button wire:click="nextMonth" variant="subtle" size="sm">{{ __('Next Month') }}</flux:button>
         </div>
 
         <!-- Bottom Row: Filters & Stats -->

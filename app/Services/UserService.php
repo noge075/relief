@@ -35,10 +35,12 @@ class UserService
             $roleName = $data['role'] ?? RoleType::EMPLOYEE->value;
             $permissions = $data['permissions'] ?? [];
             $departments = $data['departments'] ?? [];
-            
+            $homeOfficePolicyId = $data['home_office_policy_id'] ?? null;
+
             unset($data['role']);
             unset($data['permissions']);
             unset($data['departments']);
+            unset($data['home_office_policy_id']);
 
             $user = $this->userRepository->create($data);
             $this->userRepository->syncRoles($user, [$roleName]);
@@ -49,6 +51,11 @@ class UserService
 
             if (!empty($departments)) {
                 $user->departments()->sync($departments);
+            }
+
+            if ($homeOfficePolicyId) {
+                $user->home_office_policy_id = $homeOfficePolicyId;
+                $user->save();
             }
 
             return $user;
@@ -67,14 +74,19 @@ class UserService
             $roleName = $data['role'] ?? null;
             $permissions = $data['permissions'] ?? null;
             $departments = $data['departments'] ?? null;
+            $homeOfficePolicyId = $data['home_office_policy_id'] ?? null;
             
             unset($data['role']);
             unset($data['permissions']);
-            unset($data['departments']); // Új: departments
+            unset($data['departments']);
+            unset($data['home_office_policy_id']);
 
             $updated = $this->userRepository->update($id, $data);
 
             if ($updated) {
+                /**
+                 * @var User $user
+                 */
                 $user = $this->userRepository->find($id);
                 
                 if ($roleName) {
@@ -87,6 +99,11 @@ class UserService
 
                 if ($departments !== null) {
                     $user->departments()->sync($departments);
+                }
+
+                if ($homeOfficePolicyId !== null) {
+                    $user->home_office_policy_id = $homeOfficePolicyId;
+                    $user->save();
                 }
             }
 

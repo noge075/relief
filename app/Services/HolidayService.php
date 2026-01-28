@@ -20,26 +20,32 @@ class HolidayService
     ) {}
 
     /**
-     * Ellenőrzi, hogy a megadott dátum munkaszüneti nap-e.
+     * Checks if a date is a designated holiday, ignoring weekends.
      */
     public function isHoliday(CarbonInterface $date): bool
     {
         $dateStr = $date->format('Y-m-d');
         $specialDay = $this->specialDayRepository->findByDate($dateStr);
 
-        if ($specialDay) {
-            return match ($specialDay->type) {
-                'holiday' => true,
-                'workday' => false,
-                default => $date->isWeekend(),
-            };
+        // An explicitly defined workday (like a Saturday) is NOT a holiday.
+        if ($specialDay && $specialDay->type === 'workday') {
+            return false;
         }
 
-        if ($this->isOfficialHoliday($date)) {
+        // An explicitly defined holiday IS a holiday.
+        if ($specialDay && $specialDay->type === 'holiday') {
             return true;
         }
+        
+        // If it's a weekend and no special rule applies, it's not a designated holiday.
+        if ($date->isWeekend()) {
+            // Check if Spatie considers it a holiday anyway (e.g., Christmas on a Sunday)
+            // but only if there isn't a rule making it a workday.
+            return $this->isOfficialHoliday($date);
+        }
 
-        return $date->isWeekend();
+        // If no special day is defined, check the official calendar for the weekday.
+        return $this->isOfficialHoliday($date);
     }
 
     /**
@@ -153,10 +159,7 @@ class HolidayService
 
     protected function isOfficialHoliday(CarbonInterface $date): bool
     {
-        $holidays = $this->getSpatieHolidays($date->year);
-        $dateStr = $date->format('Y-m-d');
-
-        return $holidays->contains(fn ($holiday) => $holiday['date']->format('Y-m-d') === $dateStr);
+        return Holidays::for('hu')->isHoliday($date->toDateString());
     }
 
     public function createSpecialDay(array $data): SpecialDay
@@ -184,6 +187,7 @@ class HolidayService
     protected function clearCache($date): void
     {
         $year = $date instanceof CarbonInterface ? $date->year : Carbon::parse($date)->year;
+        Cache::forget("holidays_hu_{$year}");
     }
 
     public function getSpecialDaysByYear(int $year)

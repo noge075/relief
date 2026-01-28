@@ -2,8 +2,10 @@
 
 namespace App\Repositories\Eloquent;
 
+use App\Enums\AttendanceStatusType;
 use App\Models\AttendanceLog;
 use App\Repositories\Contracts\AttendanceLogRepositoryInterface;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Collection;
 
 class EloquentAttendanceLogRepository extends BaseRepository implements AttendanceLogRepositoryInterface
@@ -38,11 +40,23 @@ class EloquentAttendanceLogRepository extends BaseRepository implements Attendan
         return $query->orderBy('date')->get();
     }
 
-    public function updateOrCreateLog(int $userId, string $date, string $status, ?float $hours = null): AttendanceLog
+    public function updateOrCreateLog(
+        int $userId,
+        string $date,
+        AttendanceStatusType $status,
+        ?float $hours = null,
+        ?Carbon $checkIn = null,
+        ?Carbon $checkOut = null
+    ): AttendanceLog
     {
         return AttendanceLog::updateOrCreate(
             ['user_id' => $userId, 'date' => $date],
-            ['status' => $status, 'worked_hours' => $hours]
+            [
+                'status' => $status,
+                'worked_hours' => $hours,
+                'check_in' => $checkIn,
+                'check_out' => $checkOut,
+            ]
         );
     }
 }

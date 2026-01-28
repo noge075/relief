@@ -33,8 +33,8 @@ class SummarySheet implements FromCollection, WithHeadings, WithMapping, WithSty
             'Dolgozó azonosító',
             'Csoport',
             'Hónap',
-            'Szabadság napok száma (approved)',
-            'Beteg napok száma (approved)',
+            'Szabadság napok száma',
+            'Beteg napok száma',
             'Ledolgozott munkanapok száma',
             'HO napok száma',
         ];
@@ -46,7 +46,7 @@ class SummarySheet implements FromCollection, WithHeadings, WithMapping, WithSty
             $row['employee_id'],
             $row['group'],
             $row['month'],
-            (string) $row['vacation_days'], // String cast to ensure 0 is displayed
+            (string) $row['vacation_days'],
             (string) $row['sick_days'],
             (string) $row['worked_days'],
             (string) $row['home_office_days'],
@@ -62,6 +62,6 @@ class SummarySheet implements FromCollection, WithHeadings, WithMapping, WithSty
 
     public function title(): string
     {
-        return 'Summary';
+        return 'Összesítés';
     }
 }

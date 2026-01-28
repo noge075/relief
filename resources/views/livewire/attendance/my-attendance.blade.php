@@ -5,7 +5,15 @@
             <flux:subheading>{{ __('Track your daily attendance.') }}</flux:subheading>
         </div>
 
-        <div class="flex gap-2">
+        <div class="flex gap-2 items-center">
+            <div class="flex items-center gap-1 bg-zinc-100 dark:bg-zinc-800 p-1 rounded-lg shadow-sm">
+                <flux:button wire:click="jumpToPreviousMonth" variant="ghost" size="sm" class="h-8! w-8!" icon="chevron-left" />
+                <div class="h-4 w-px bg-zinc-300 dark:bg-zinc-600 mx-1"></div>
+                <flux:button wire:click="jumpToCurrentMonth" variant="ghost" size="sm" class="text-xs font-medium px-3">{{ __('Current Month') }}</flux:button>
+                <div class="h-4 w-px bg-zinc-300 dark:bg-zinc-600 mx-1"></div>
+                <flux:button wire:click="jumpToNextMonth" variant="ghost" size="sm" class="h-8! w-8!" icon="chevron-right" />
+            </div>
+
             <flux:select wire:model.live="year" class="w-32">
                 @foreach(range(Carbon\Carbon::now()->year - 1, Carbon\Carbon::now()->year + 1) as $y)
                     <flux:select.option value="{{ $y }}">{{ $y }}</flux:select.option>
@@ -18,32 +26,15 @@
                 @endforeach
             </flux:select>
 
-            <flux:button variant="primary" icon="arrow-down-tray" href="{{ route('attendance.download-pdf', ['year' => $year, 'month' => $month]) }}" target="_blank">{{ __('Download PDF') }}</flux:button>
+            <flux:button
+                variant="primary"
+                icon="arrow-down-tray"
+                wire:click="downloadPdf"
+            >
+                {{ __('Download PDF') }}
+            </flux:button>
         </div>
     </div>
-
-    @if(auth()->user()->employment_type?->needsTimeTracking())
-        <flux:card class="flex flex-col items-center justify-center py-6 gap-4 bg-zinc-50 dark:bg-zinc-800/50 border-dashed">
-            <div class="text-center">
-                <div class="text-sm text-zinc-500 mb-1">{{ \Carbon\Carbon::today()->translatedFormat('Y. F d. l') }}</div>
-                @if($currentLog)
-                    <div class="text-2xl font-bold text-zinc-900 dark:text-white mb-4">
-                        {{ __('Checked in at:') }} {{ $currentLog->check_in->format('H:i') }}
-                    </div>
-                    <flux:button wire:click="checkOut" variant="danger" class="min-w-50 h-12 text-lg" icon="arrow-right-start-on-rectangle">
-                        {{ __('Check Out') }}
-                    </flux:button>
-                @else
-                    <div class="text-2xl font-bold text-zinc-900 dark:text-white mb-4">
-                        {{ __('Not checked in') }}
-                    </div>
-                    <flux:button wire:click="checkIn" variant="primary" class="min-w-50 h-12 text-lg" icon="arrow-right-end-on-rectangle">
-                        {{ __('Check In') }}
-                    </flux:button>
-                @endif
-            </div>
-        </flux:card>
-    @endif
 
     <flux:card class="p-0! overflow-hidden">
         <flux:table>
@@ -53,58 +44,62 @@
                 <flux:table.column>{{ __('Check Out') }}</flux:table.column>
                 <flux:table.column>{{ __('Worked Hours') }}</flux:table.column>
                 <flux:table.column>{{ __('Status') }}</flux:table.column>
-                @if(auth()->user()->employment_type?->needsTimeTracking())
-                    <flux:table.column>{{ __('Actions') }}</flux:table.column>
-                @endif
+                <flux:table.column>{{ __('Actions') }}</flux:table.column>
             </flux:table.columns>
 
             <flux:table.rows>
                 @foreach($days as $day)
                     @php
-                        $rowClass = $day['is_weekend'] || $day['is_holiday'] ? 'bg-zinc-50/50 dark:bg-zinc-900/50' : '';
-                        if ($day['is_today']) $rowClass .= ' bg-blue-50/30 dark:bg-blue-900/10';
+                        $isWeekend = $day->date->isWeekend();
+                        $isHoliday = $day->status === \App\Enums\AttendanceStatusType::HOLIDAY;
+                        $isToday = $day->date->isToday();
+                        $rowClass = $isWeekend || $isHoliday ? 'bg-zinc-50/50 dark:bg-zinc-900/50' : '';
+                        if ($isToday) $rowClass .= ' bg-blue-50/30 dark:bg-blue-900/10';
                     @endphp
-                    <flux:table.row :key="$day['date']->format('Y-m-d')" class="{{ $rowClass }}">
-                        <flux:table.cell class="font-medium {{ $day['is_weekend'] || $day['is_holiday'] ? 'text-zinc-400' : '' }}">
-                            {{ $day['date']->translatedFormat('Y.m.d (l)') }}
+                    <flux:table.row :key="$day->date->format('Y-m-d')" class="{{ $rowClass }}">
+                        <flux:table.cell class="font-medium {{ $isWeekend || $isHoliday ? 'text-zinc-400' : '' }}">
+                            {{ $day->date->translatedFormat('Y.m.d (l)') }}
                         </flux:table.cell>
                         <flux:table.cell>
-                            {{ $day['check_in'] ?? '-' }}
+                            {{ $day->check_in ? $day->check_in->format('H:i') : '-' }}
                         </flux:table.cell>
                         <flux:table.cell>
-                            {{ $day['check_out'] ?? '-' }}
+                            {{ $day->check_out ? $day->check_out->format('H:i') : '-' }}
                         </flux:table.cell>
                         <flux:table.cell>
-                            @if($day['worked_hours'] > 0)
-                                {{ number_format($day['worked_hours'], 2) }} {{ __('h') }}
+                            @if($day->worked_hours > 0)
+                                {{ number_format($day->worked_hours, 2) }} {{ __('h') }}
                             @else
                                 -
                             @endif
                         </flux:table.cell>
                         <flux:table.cell>
-                            @if($day['status'] && $day['status'] !== '-')
-                                @php
-                                    $color = match($day['status_type']) {
-                                        'present' => 'green',
-                                        'vacation' => 'yellow',
-                                        'sick' => 'red',
-                                        'home_office' => 'blue',
-                                        'holiday' => 'zinc',
-                                        'weekend' => 'zinc',
-                                        'scheduled' => 'zinc',
-                                        default => 'zinc'
-                                    };
-                                @endphp
-                                <flux:badge size="sm" :color="$color">{{ __($day['status']) }}</flux:badge>
-                            @else
-                                -
+                            @php
+                                $color = match($day->status) {
+                                    \App\Enums\AttendanceStatusType::PRESENT => 'green',
+                                    \App\Enums\AttendanceStatusType::VACATION => 'yellow',
+                                    \App\Enums\AttendanceStatusType::SICK_LEAVE => 'red',
+                                    \App\Enums\AttendanceStatusType::HOME_OFFICE => 'blue',
+                                    \App\Enums\AttendanceStatusType::HOLIDAY => 'zinc',
+                                    \App\Enums\AttendanceStatusType::OFF => 'zinc',
+                                    \App\Enums\AttendanceStatusType::UNPAID => 'gray',
+                                    \App\Enums\AttendanceStatusType::SCHEDULED => 'sky',
+                                    \App\Enums\AttendanceStatusType::WEEKEND => 'zinc',
+                                    default => 'zinc'
+                                };
+                            @endphp
+                            <div class="flex items-center gap-2">
+                                <flux:badge size="sm" :color="$color">{{ $day->status->label() }}</flux:badge>
+                                @if($day->status === \App\Enums\AttendanceStatusType::HOLIDAY && $day->holiday_name)
+                                    <span class="text-xs text-zinc-500">{{ $day->holiday_name }}</span>
+                                @endif
+                            </div>
+                        </flux:table.cell>
+                        <flux:table.cell>
+                            @if($this->canEditLog($day))
+                                <flux:button variant="ghost" size="sm" icon="pencil-square" wire:click="editLog('{{ $day->date->format('Y-m-d') }}')">{{ __('Edit') }}</flux:button>
                             @endif
                         </flux:table.cell>
-                        @if(auth()->user()->employment_type?->needsTimeTracking())
-                            <flux:table.cell>
-                                <flux:button variant="ghost" size="sm" icon="pencil-square" wire:click="editLog('{{ $day['date']->format('Y-m-d') }}')">{{ __('Edit') }}</flux:button>
-                            </flux:table.cell>
-                        @endif
                     </flux:table.row>
                 @endforeach
             </flux:table.rows>
@@ -113,3 +108,13 @@
 
     @include('livewire.attendance.edit-modal')
 </div>
+
+@push('scripts')
+<script>
+    document.addEventListener('livewire:initialized', () => {
+        @this.on('open-pdf-new-tab', ({ url }) => {
+            window.open(url, '_blank');
+        });
+    });
+</script>
+@endpush

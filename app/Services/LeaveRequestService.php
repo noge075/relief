@@ -2,12 +2,12 @@
 
 namespace App\Services;
 
+use App\Enums\HomeOfficePolicyType;
 use App\Enums\LeaveStatus;
 use App\Enums\LeaveType;
 use App\Enums\PermissionType;
 use App\Enums\RoleType;
 use App\Models\LeaveRequest;
-use App\Models\Setting;
 use App\Models\User;
 use App\Notifications\LeaveRequestApprovedNotification;
 use App\Notifications\LeaveRequestDeletedNotification;
@@ -17,6 +17,7 @@ use App\Repositories\Contracts\LeaveBalanceRepositoryInterface;
 use App\Repositories\Contracts\LeaveRequestRepositoryInterface;
 use Carbon\Carbon;
 use Carbon\CarbonImmutable;
+use Carbon\CarbonPeriod;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
@@ -28,7 +29,8 @@ class LeaveRequestService
         protected LeaveRequestRepositoryInterface $leaveRequestRepository,
         protected LeaveBalanceRepositoryInterface $leaveBalanceRepository,
         protected HolidayService $holidayService,
-        protected PayrollService $payrollService
+        protected PayrollService $payrollService,
+        protected AttendanceService $attendanceService
     ) {}
 
     /**
@@ -132,6 +134,12 @@ class LeaveRequestService
                     LeaveType::VACATION->value,
                     $request->days_count
                 );
+            }
+
+            // Generate attendance logs for the leave period
+            $period = CarbonPeriod::create($request->start_date, $request->end_date);
+            foreach ($period as $date) {
+                $this->attendanceService->generateLogForUser($request->user, $date);
             }
 
             activity()
@@ -296,25 +304,40 @@ class LeaveRequestService
 
     protected function checkHomeOfficeLimit(User $user, Carbon $start, Carbon $end): ?string
     {
-        $limitDays = (int) (Setting::where('key', 'ho_limit_days')->value('value') ?? 1);
-        $limitPeriod = (int) (Setting::where('key', 'ho_limit_period')->value('value') ?? 14);
+        $policy = $user->homeOfficePolicy;
 
-        $daysRequested = $start->diffInDays($end) + 1;
-        if ($daysRequested > $limitDays) {
-            return __('Home Office limit exceeded: Only :limit day(s) allowed per request.', ['limit' => $limitDays]);
+        if (!$policy) {
+            return __('No Home Office policy assigned.');
         }
 
-        $checkStart = $start->copy()->subDays($limitPeriod - 1);
-        $checkEnd = $start->copy()->subDay();
+        switch ($policy->type) {
+            case HomeOfficePolicyType::NONE:
+                return __('Home Office is not allowed based on your policy.');
 
-        $pastDaysCount = $this->leaveRequestRepository
-            ->getForUserInPeriod($user->id, $checkStart->format('Y-m-d'), $checkEnd->format('Y-m-d'))
-            ->where('type', LeaveType::HOME_OFFICE)
-            ->whereIn('status', [LeaveStatus::APPROVED, LeaveStatus::PENDING])
-            ->sum('days_count');
+            case HomeOfficePolicyType::LIMITED:
+                $limitDays = $policy->limit_days;
+                $periodDays = $policy->period_days;
 
-        if (($pastDaysCount + $daysRequested) > $limitDays) {
-            return __('Home Office limit exceeded: :limit day(s) / :period days.', ['limit' => $limitDays, 'period' => $limitPeriod]);
+                $daysRequested = $this->calculateWorkingDays($start, $end);
+
+                $checkStart = $start->copy()->subDays($periodDays - 1);
+                $checkEnd = $end;
+
+                $pastDaysCount = $this->leaveRequestRepository
+                    ->getForUserInPeriod($user->id, $checkStart->format('Y-m-d'), $checkEnd->format('Y-m-d'))
+                    ->where('type', LeaveType::HOME_OFFICE)
+                    ->whereIn('status', [LeaveStatus::APPROVED, LeaveStatus::PENDING])
+                    ->sum('days_count');
+
+                if (($pastDaysCount + $daysRequested) > $limitDays) {
+                    return __('Home Office limit exceeded: :limit day(s) / :period days.', ['limit' => $limitDays, 'period' => $periodDays]);
+                }
+                break;
+
+            case HomeOfficePolicyType::FLEXIBLE:
+            case HomeOfficePolicyType::FULL_REMOTE:
+                // No limit check needed
+                break;
         }
 
         return null;

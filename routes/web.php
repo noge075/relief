@@ -13,8 +13,8 @@ use App\Livewire\OrganizationChart;
 use App\Livewire\Payroll\MonthlyReport;
 use App\Livewire\Roles\ManageRoles;
 use App\Livewire\Settings\ManageAuditLogs;
-use App\Livewire\Settings\ManageDepartments; // Új
-use App\Livewire\Settings\ManageSettings;
+use App\Livewire\Settings\ManageDepartments;
+use App\Livewire\Settings\ManageHomeOfficePolicies;
 use App\Livewire\Settings\ManageWorkSchedules;
 use App\Livewire\SpecialDays\ManageSpecialDays;
 use App\Livewire\StatusBoard;
@@ -26,7 +26,7 @@ Route::redirect('/', 'dashboard')
 Route::middleware(['auth'])->group(function () {
     Route::view('dashboard', 'dashboard')->name('dashboard');
     Route::get('/attendance', MyAttendance::class)->name('attendance.index');
-    Route::get('/attendance/download-pdf/{year}/{month}', [AttendanceController::class, 'downloadPdf'])->name('attendance.download-pdf');
+    Route::get('/attendance/download-pdf', [AttendanceController::class, 'downloadPdf'])->name('attendance.download-pdf');
     
     Route::get('/my-requests', MyRequests::class)->name('my-requests.index');
     Route::get('/my-documents', MyDocuments::class)->name('my-documents.index');
@@ -44,7 +44,7 @@ Route::middleware(['auth'])->group(function () {
     Route::middleware(['can:manage settings'])->group(function () {
         Route::get('/roles', ManageRoles::class)->name('settings.roles');
         Route::get('/special-days', ManageSpecialDays::class)->name('settings.special-days');
-        Route::get('/settings', ManageSettings::class)->name('settings.index');
+        Route::livewire('home-office-policies', ManageHomeOfficePolicies::class)->name('settings.home-office-policies');
     });
     
     Route::get('/audit-logs', ManageAuditLogs::class)->name('settings.audit-logs')->middleware('can:view audit logs');

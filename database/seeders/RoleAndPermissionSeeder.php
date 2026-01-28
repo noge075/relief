@@ -61,6 +61,8 @@ class RoleAndPermissionSeeder extends Seeder
             PermissionType::DELETE_DOCUMENTS->value,
             PermissionType::MANAGE_SETTINGS->value,
             PermissionType::VIEW_AUDIT_LOGS->value,
+            PermissionType::SEND_BULK_EMAILS->value,
+            PermissionType::MANAGE_HOME_OFFICE_POLICIES->value,
         ]);
 
         // Manager - Team Lead
@@ -74,6 +76,7 @@ class RoleAndPermissionSeeder extends Seeder
             PermissionType::VIEW_ATTENDANCE->value, 
             PermissionType::VIEW_STATUS_BOARD->value,
             PermissionType::VIEW_DOCUMENTS->value,
+            PermissionType::SEND_BULK_EMAILS->value,
         ]);
 
         // Employee - Standard User
@@ -93,6 +96,7 @@ class RoleAndPermissionSeeder extends Seeder
             PermissionType::VIEW_PAYROLL_DATA->value, 
             PermissionType::MANAGE_MONTHLY_CLOSURES->value,
             PermissionType::VIEW_ALL_LEAVE_REQUESTS->value,
+            PermissionType::SEND_BULK_EMAILS->value,
         ]);
     }
 }

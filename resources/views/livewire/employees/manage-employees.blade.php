@@ -32,9 +32,9 @@
             <div class="flex flex-wrap gap-2">
                 @foreach($departments as $dept)
                     @php
-                        $deptColor = $deptColors[$dept->id % count($deptColors)];
+                        $deptColors = ['indigo', 'fuchsia', 'teal', 'rose', 'cyan', 'amber', 'violet', 'lime', 'sky', 'pink'];
                     @endphp
-                    <flux:badge size="sm" :color="$deptColor">{{ $dept->name }}</flux:badge>
+                    <flux:badge size="sm" :color="$deptColors[$dept->id % count($deptColors)]">{{ $dept->name }}</flux:badge>
                 @endforeach
             </div>
         </div>
@@ -66,6 +66,13 @@
                 @endforeach
             </flux:select>
 
+            <flux:select wire:model.live="homeOfficePolicyFilter" placeholder="{{ __('All Home Office Policies') }}" icon="home" class="w-full sm:w-48">
+                <flux:select.option value="">{{ __('All Home Office Policies') }}</flux:select.option>
+                @foreach($homeOfficePolicies as $policy)
+                    <flux:select.option value="{{ $policy->id }}">{{ $policy->name }}</flux:select.option>
+                @endforeach
+            </flux:select>
+
             <flux:select wire:model.live="roleFilter" placeholder="{{ __('All Roles') }}" icon="user-group" class="w-full sm:w-48">
                 <flux:select.option value="">{{ __('All Roles') }}</flux:select.option>
                 @foreach($roles as $r)
@@ -81,7 +88,7 @@
                 <flux:select.option value="0">{{ __('Inactive') }}</flux:select.option>
             </flux:select>
 
-            @if($search || $departmentFilter || $roleFilter || $statusFilter !== null || $employmentTypeFilter || $workScheduleFilter)
+            @if($search || $departmentFilter || $roleFilter || $statusFilter !== null || $employmentTypeFilter || $workScheduleFilter || $homeOfficePolicyFilter)
                 <flux:button wire:click="clearFilters" variant="ghost" icon="x-mark" class="text-red-500 hover:text-red-600">{{ __('Clear') }}</flux:button>
             @endif
         </div>
@@ -94,6 +101,7 @@
                 <flux:table.column>{{ __('Department') }}</flux:table.column>
                 <flux:table.column>{{ __('Employment Type') }}</flux:table.column>
                 <flux:table.column>{{ __('Work Schedule') }}</flux:table.column>
+                <flux:table.column>{{ __('Home Office Policy') }}</flux:table.column>
                 <flux:table.column>{{ __('Role') }}</flux:table.column>
                 <flux:table.column>{{ __('Status') }}</flux:table.column>
                 <flux:table.column>{{ __('Actions') }}</flux:table.column>
@@ -116,9 +124,9 @@
                                 <div class="flex flex-wrap gap-1">
                                     @foreach($user->departments as $dept)
                                         @php
-                                            $deptColor = $deptColors[$dept->id % count($deptColors)];
+                                            $deptColors = ['indigo', 'fuchsia', 'teal', 'rose', 'cyan', 'amber', 'violet', 'lime', 'sky', 'pink'];
                                         @endphp
-                                        <flux:badge size="sm" :color="$deptColor">{{ $dept->name }}</flux:badge>
+                                        <flux:badge size="sm" :color="$deptColors[$dept->id % count($deptColors)]">{{ $dept->name }}</flux:badge>
                                     @endforeach
                                 </div>
                             @else
@@ -143,6 +151,22 @@
                         </flux:table.cell>
                         <flux:table.cell>
                             {{ $user->workSchedule->name ?? '-' }}
+                        </flux:table.cell>
+                        <flux:table.cell>
+                            @if($user->homeOfficePolicy)
+                                @php
+                                    $policyColor = match($user->homeOfficePolicy->type->value) {
+                                        'full_remote' => 'green',
+                                        'flexible' => 'blue',
+                                        'limited' => 'yellow',
+                                        'none' => 'red',
+                                        default => 'zinc'
+                                    };
+                                @endphp
+                                <flux:badge size="sm" :color="$policyColor">{{ $user->homeOfficePolicy->name }}</flux:badge>
+                            @else
+                                -
+                            @endif
                         </flux:table.cell>
                         <flux:table.cell>
                             @foreach($user->roles as $role)

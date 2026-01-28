@@ -33,6 +33,10 @@
                         {{ __('Company Directory') }}
                     </x-flux::sidebar.item>
 
+                    <flux:sidebar.item icon="user-group" :href="route('organization.index')" :current="request()->routeIs('organization.index')" wire:navigate>
+                        {{ __('Organization Chart') }}
+                    </flux:sidebar.item>
+
                     @can('view status board')
                         <flux:sidebar.item icon="table-cells" :href="route('status-board')" :current="request()->routeIs('status-board')" wire:navigate>
                             {{ __('Status Board') }}
@@ -46,9 +50,6 @@
                         @can('view users')
                             <flux:sidebar.item icon="users" :href="route('employees.index')" :current="request()->routeIs('employees.index')" wire:navigate>
                                 {{ __('Employees') }}
-                            </flux:sidebar.item>
-                            <flux:sidebar.item icon="user-group" :href="route('organization.index')" :current="request()->routeIs('organization.index')" wire:navigate>
-                                {{ __('Organization Chart') }}
                             </flux:sidebar.item>
                         @endcan
 
@@ -93,8 +94,8 @@
                         <flux:sidebar.item icon="calendar-days" :href="route('settings.special-days')" :current="request()->routeIs('settings.special-days')" wire:navigate>
                             {{ __('Special Days') }}
                         </flux:sidebar.item>
-                        <flux:sidebar.item icon="cog-6-tooth" :href="route('settings.index')" :current="request()->routeIs('settings.index')" wire:navigate>
-                            {{ __('System Settings') }}
+                        <flux:sidebar.item icon="home-modern" :href="route('settings.home-office-policies')" :current="request()->routeIs('settings.home-office-policies')" wire:navigate>
+                            {{ __('Home Office Policies') }}
                         </flux:sidebar.item>
                         @can('view audit logs')
                             <flux:sidebar.item icon="clipboard-document-list" :href="route('settings.audit-logs')" :current="request()->routeIs('settings.audit-logs')" wire:navigate>
@@ -123,5 +124,6 @@
 
         @fluxScripts
         @vite('resources/js/app.js')
+        @stack('scripts')
     </body>
 </html>

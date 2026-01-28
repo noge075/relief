@@ -11,7 +11,7 @@
     @endif
 
     <div class="py-2">
-        <div class="flex items-center gap-4 p-3 pl-5 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-lg shadow-sm group hover:border-indigo-300 dark:hover:border-indigo-700 transition w-full max-w-md relative z-10 cursor-move">
+        <div class="flex items-center gap-4 p-3 pl-5 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-lg shadow-sm group hover:border-indigo-300 dark:hover:border-indigo-700 transition w-full max-w-md relative z-10 @can(\App\Enums\PermissionType::EDIT_USERS->value) cursor-move @endcan">
 
             <!-- Összecsukó gomb (csak ha vannak gyerekek) -->
             @if($user->subordinates->count() > 0)
@@ -43,12 +43,16 @@
                     @endphp
                     <flux:badge size="xs" :color="$roleColor">{{ $roleLabel }}</flux:badge>
 
-                    @if($user->department)
+                    @if($user->departments->isNotEmpty())
                         @php
                             $deptColors = ['indigo', 'fuchsia', 'teal', 'rose', 'cyan', 'amber', 'violet', 'lime', 'sky', 'pink'];
-                            $deptColor = $deptColors[$user->department->id % count($deptColors)];
                         @endphp
-                        <flux:badge size="xs" :color="$deptColor">{{ $user->department->name }}</flux:badge>
+                        @foreach($user->departments as $dept)
+                            @php
+                                $deptColor = $deptColors[$dept->id % count($deptColors)];
+                            @endphp
+                            <flux:badge size="xs" :color="$deptColor">{{ $dept->name }}</flux:badge>
+                        @endforeach
                     @endif
 
                     <!-- Jelzés, ha csukva van -->

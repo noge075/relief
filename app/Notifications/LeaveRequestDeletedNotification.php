@@ -26,11 +26,11 @@ class LeaveRequestDeletedNotification extends Notification implements ShouldQueu
         $user = $this->leaveRequest->user;
         $start = $this->leaveRequest->start_date->format('Y-m-d');
         $end = $this->leaveRequest->end_date->format('Y-m-d');
+        $type = $this->leaveRequest->type->label();
 
         return (new MailMessage)
             ->subject(__('Leave Request Deleted: :name', ['name' => $user->name]))
-            ->line(__(':name has deleted a pending leave request.', ['name' => $user->name]))
-            ->line(__('Type: :type', ['type' => ucfirst($this->leaveRequest->type->value)]))
+            ->line(__(':name has deleted a pending :type request.', ['name' => $user->name, 'type' => $type]))
             ->line(__('Date: :start to :end', ['start' => $start, 'end' => $end]));
     }
 
@@ -39,12 +39,13 @@ class LeaveRequestDeletedNotification extends Notification implements ShouldQueu
         $user = $this->leaveRequest->user;
         $start = $this->leaveRequest->start_date->format('Y-m-d');
         $end = $this->leaveRequest->end_date->format('Y-m-d');
+        $type = $this->leaveRequest->type->label();
 
         return [
             'title' => __('Leave Request Deleted'),
-            'message' => __(':name has deleted a pending leave request (:type from :start to :end).', [
+            'message' => __(':name has deleted a pending :type request from :start to :end.', [
                 'name' => $user->name,
-                'type' => ucfirst($this->leaveRequest->type->value),
+                'type' => $type,
                 'start' => $start,
                 'end' => $end,
             ]),
