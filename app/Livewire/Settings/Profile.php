@@ -20,6 +20,8 @@ class Profile extends Component
     public $ssn = '';
     public $address = '';
     public $phone = '';
+    public bool $accepted_terms = false;
+    public bool $showPrivacyModal = false;
 
     public $signature;
     public $signatureData;
@@ -41,6 +43,7 @@ class Profile extends Component
         $this->ssn = $user->ssn;
         $this->address = $user->address;
         $this->phone = $user->phone;
+        $this->accepted_terms = (bool)$user->accepted_terms;
         
         $this->currentSignature = $user->signature_path;
     }
@@ -58,6 +61,7 @@ class Profile extends Component
             'ssn' => ['nullable', 'string', 'max:20'],
             'address' => ['nullable', 'string', 'max:255'],
             'phone' => ['nullable', 'string', 'max:20'],
+            'accepted_terms' => ['accepted'],
         ]);
 
         $user->update($validated);

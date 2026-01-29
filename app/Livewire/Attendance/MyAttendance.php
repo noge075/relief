@@ -10,6 +10,7 @@ use App\Services\PayrollService;
 use Carbon\Carbon;
 use Carbon\CarbonPeriod;
 use Flux\Flux;
+use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\Computed;
 use Livewire\Component;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
@@ -63,6 +64,12 @@ class MyAttendance extends Component
     }
 
     #[Computed]
+    public function isMonthClosed(): bool
+    {
+        return $this->payrollService->isMonthClosed($this->year, $this->month);
+    }
+
+    #[Computed]
     public function days()
     {
         $start = $this->selectedDate->copy()->startOfMonth();
@@ -109,12 +116,15 @@ class MyAttendance extends Component
     public function editLog(string $dateStr): void
     {
         $date = Carbon::parse($dateStr);
-        $log = $this->attendanceLogRepository->getLogsForPeriod($dateStr, $dateStr, auth()->id())->first()
-            ?? new AttendanceLog(['date' => $date, 'status' => AttendanceStatusType::OFF]);
+        $log = $this->attendanceLogRepository->getLogsForPeriod($dateStr, $dateStr, auth()->id())->first();
 
-        if (!$this->canEditLog($log)) {
-            Flux::toast(__('You cannot edit this entry.'), variant: 'danger');
-            return;
+        if (!$log) {
+            $schedule = auth()->user()->workSchedule;
+            $status = ($schedule && $schedule->isWorkday($date))
+                ? AttendanceStatusType::SCHEDULED
+                : AttendanceStatusType::OFF;
+
+            $log = new AttendanceLog(['date' => $date, 'status' => $status]);
         }
 
         $this->editingLog = $log;
@@ -133,26 +143,55 @@ class MyAttendance extends Component
 
     public function saveLog(): void
     {
-        if (!$this->canEditLog($this->editingLog)) {
+        $date = Carbon::parse($this->editingDate);
+        $logToCheck = $this->attendanceLogRepository->getLogsForPeriod(
+            $this->editingDate,
+            $this->editingDate,
+            auth()->id()
+        )->first();
+
+        if (!$logToCheck) {
+            $schedule = auth()->user()->workSchedule;
+            $status = ($schedule && $schedule->isWorkday($date))
+                ? AttendanceStatusType::SCHEDULED
+                : AttendanceStatusType::OFF;
+
+            $logToCheck = new AttendanceLog([
+                'user_id' => auth()->id(),
+                'date' => $date,
+                'status' => $status
+            ]);
+        }
+
+        if (!$this->canEditLog($logToCheck)) {
+            Flux::toast(__('You cannot edit this day.'), variant: 'danger');
             $this->showEditModal = false;
             return;
         }
 
-        $this->validateLogData();
+        try {
+            $this->validateLogData();
+        } catch (ValidationException $e) {
+            Flux::toast(__('Check-in/out times must be strictly within work schedule.'), variant: 'danger');
+            throw $e;
+        }
 
-        $date = Carbon::parse($this->editingDate);
         $checkIn = $this->editingCheckIn ? $date->copy()->setTimeFromTimeString($this->editingCheckIn) : null;
         $checkOut = $this->editingCheckOut ? $date->copy()->setTimeFromTimeString($this->editingCheckOut) : null;
         $workedHours = ($checkIn && $checkOut) ? $checkIn->floatDiffInHours($checkOut) : 0;
 
         $this->attendanceLogRepository->updateOrCreateLog(
-            auth()->id(), $this->editingDate, AttendanceStatusType::PRESENT, $workedHours, $checkIn, $checkOut
+            auth()->id(),
+            $this->editingDate,
+            AttendanceStatusType::PRESENT,
+            $workedHours,
+            $checkIn,
+            $checkOut
         );
 
         Flux::toast(__('Attendance updated successfully.'), variant: 'success');
         $this->showEditModal = false;
     }
-
 
     private function resolveDayLog(Carbon $date, $existingLogs, $holidays, $user): AttendanceLog
     {
@@ -197,25 +236,44 @@ class MyAttendance extends Component
     private function validateLogData(): void
     {
         $schedule = auth()->user()->workSchedule;
+
         $start = $schedule?->start_time ? Carbon::parse($schedule->start_time)->format('H:i') : '00:00';
         $end = $schedule?->end_time ? Carbon::parse($schedule->end_time)->format('H:i') : '23:59';
 
         $this->validate([
-            'editingCheckIn' => ['nullable', 'date_format:H:i', "after_or_equal:{$start}"],
-            'editingCheckOut' => ['nullable', 'date_format:H:i', "before_or_equal:{$end}", 'after:editingCheckIn'],
+            'editingCheckIn' => [
+                'nullable',
+                'date_format:H:i',
+                "after_or_equal:{$start}"
+            ],
+            'editingCheckOut' => [
+                'nullable',
+                'date_format:H:i',
+                "before_or_equal:{$end}",
+                'after:editingCheckIn'
+            ],
+        ], [
+            'editingCheckIn.after_or_equal' => __("Too early. Work starts at :time.", ['time' => $start]),
+            'editingCheckOut.before_or_equal' => __("Too late. Work ends at :time.", ['time' => $end]),
         ]);
     }
 
     public function canEditLog(?AttendanceLog $log): bool
     {
-        if (!$log) return false;
-        if ($this->payrollService->isMonthClosed($log->date->year, $log->date->month)) return false;
+        if (!$log || empty($log->date)) return false;
+        $date = $log->date instanceof Carbon ? $log->date : Carbon::parse($log->date);
+
+        if ($this->payrollService->isMonthClosed($date->year, $date->month)) {
+            return false;
+        }
+
         if (auth()->user()->hasRole('super-admin')) return true;
 
-        $isEditableStatus = in_array($log->status, [AttendanceStatusType::PRESENT, AttendanceStatusType::SCHEDULED]);
-        $isFutureOrToday = $log->date->isToday() || $log->date->isFuture();
-
-        return $isEditableStatus && $isFutureOrToday;
+        return in_array($log->status, [
+            AttendanceStatusType::PRESENT,
+            AttendanceStatusType::SCHEDULED,
+            AttendanceStatusType::OFF
+        ]);
     }
 
     public function render()

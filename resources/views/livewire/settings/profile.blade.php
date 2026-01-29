@@ -38,8 +38,23 @@
 
                 <flux:input wire:model="address" label="{{ __('Address') }}" />
 
+                <div class="flex items-center space-x-2">
+                    <flux:field variant="inline">
+                        <flux:checkbox wire:model.live="accepted_terms" />
+
+                        <flux:label>
+                            {{ __('I accept the') }}&nbsp;
+                            <a href="#" wire:click.prevent="$set('showPrivacyModal', true)" class="text-accent hover:text-primary font-bold">
+                                {{ __('privacy policy') }}
+                            </a>
+                        </flux:label>
+
+                        <flux:error name="accepted_terms" />
+                    </flux:field>
+                </div>
+
                 <div class="flex justify-end">
-                    <flux:button type="submit" variant="primary">{{ __('Save Changes') }}</flux:button>
+                    <flux:button type="submit" variant="primary" :disabled="!$accepted_terms">{{ __('Save Changes') }}</flux:button>
                 </div>
             </form>
         </div>
@@ -146,5 +161,17 @@
             @endif
         </div>
 
+        <!-- Privacy Policy Modal -->
+        <flux:modal wire:model="showPrivacyModal" class="min-w-300">
+            <div class="space-y-6">
+                <h2 class="text-lg font-medium text-gray-900 dark:text-gray-100">{{ __('Privacy Policy') }}</h2>
+                <div class="mt-4 text-sm text-gray-600 dark:text-gray-400 space-y-4">
+                    <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. ...</p>
+                </div>
+                <div class="mt-6 flex justify-end">
+                    <flux:button wire:click="$set('showPrivacyModal', false)">{{ __('Close') }}</flux:button>
+                </div>
+            </div>
+        </flux:modal>
     </div>
 </x-settings.layout>

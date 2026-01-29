@@ -36,6 +36,26 @@
         </div>
     </div>
 
+    @if($this->isMonthClosed)
+        <div class="rounded-xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-900/20">
+            <div class="flex items-center gap-3">
+                <flux:icon.lock-closed class="w-5 h-5 text-amber-600 dark:text-amber-400" />
+                <div class="text-sm font-medium text-amber-800 dark:text-amber-300">
+                    {{ __('This month is closed. Attendance cannot be modified.') }}
+                </div>
+            </div>
+        </div>
+    @else
+        <div class="rounded-xl border border-blue-200 bg-blue-50 p-4 dark:border-blue-800 dark:bg-blue-900/20">
+            <div class="flex items-center gap-3">
+                <flux:icon.information-circle class="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                <div class="text-sm font-medium text-blue-800 dark:text-blue-300">
+                    {{ __('Attendance logs are editable until the month is closed.') }}
+                </div>
+            </div>
+        </div>
+    @endif
+
     <flux:card class="p-0! overflow-hidden">
         <flux:table>
             <flux:table.columns>

@@ -13,7 +13,8 @@ class DatabaseSeeder extends Seeder
             HomeOfficePolicySeeder::class,
             UserSeeder::class,
             LeaveBalanceSeeder::class,
-            AttendanceSeeder::class
+            AttendanceSeeder::class,
+            MonthlyClosureSeeder::class,
         ]);
     }
 }

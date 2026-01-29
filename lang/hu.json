@@ -575,5 +575,18 @@
     "The Check Out time must be before or equal to the scheduled end time (:time).": "A Befejezés időpontja nem lehet későbbi, mint a tervezett befejezés (:time).",
     "The Check Out time must be after the Check In time.": "A Befejezés időpontjának későbbinek kell lennie a Kezdésnél.",
     "Attendance updated successfully.": "A jelenléti adatok frissítése sikeresen megtörtént.",
-    "Total Worked Hours": "Ledolgozott órák összesen"
+    "Total Worked Hours": "Ledolgozott órák összesen",
+    "You cannot edit this day.": "Ezt a napot nem szerkesztheted.",
+    "Check-in/out times must be strictly within work schedule.": "Az érkezési és távozási időknek szigorúan a munkaidőn belül kell lenniük.",
+    "Too early. Work starts at :time.": "Túl korai. A munkaidő ekkor kezdődik: :time.",
+    "Too late. Work ends at :time.": "Túl késő. A munkaidő eddig tart: :time.",
+    "Validation failed. Please check the input times.": "Validációs hiba. Kérlek ellenőrizd a megadott időpontokat.",
+    "Generated document not found.": "A generált dokumentum nem található.",
+    "File not found on disk.": "A fájl nem található a lemezen.",
+    "System generated documents cannot be deleted manually.": "A rendszer által generált dokumentumok nem törölhetők manuálisan.",
+    "This month is closed. Attendance cannot be modified.": "Ez a hónap le van zárva. A jelenléti ív nem módosítható.",
+    "Attendance logs are editable until the month is closed.": "A jelenléti adatok szerkeszthetőek, amíg a hónap nincs lezárva.",
+    "I accept the": "Elfogadom az",
+    "privacy policy": "adatvédelmi szabályzatot",
+    "Privacy Policy": "Adatvédelmi szabályzat"
 }
