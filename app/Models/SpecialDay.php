@@ -2,7 +2,7 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
+use App\Enums\SpecialDayType;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Spatie\Activitylog\Traits\LogsActivity;
@@ -16,6 +16,7 @@ class SpecialDay extends Model
 
     protected $casts = [
         'date' => 'date',
+        'type' => SpecialDayType::class
     ];
 
     public function getActivitylogOptions(): LogOptions

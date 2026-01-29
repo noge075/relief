@@ -18,7 +18,7 @@ class ManageAuditLogs extends Component
     public $eventFilter = '';
     public $causerFilter = '';
     public $perPage = 10;
-    
+
     // Modal
     public $showDetailsModal = false;
     public $selectedActivity = null;
@@ -35,14 +35,29 @@ class ManageAuditLogs extends Component
     public function mount()
     {
         $this->authorize(PermissionType::VIEW_AUDIT_LOGS->value);
-        
+
         $this->perPage = request()->query('per_page', 10);
     }
 
-    public function updatedSearch() { $this->resetPage(); }
-    public function updatedEventFilter() { $this->resetPage(); }
-    public function updatedCauserFilter() { $this->resetPage(); }
-    public function updatedPerPage() { $this->resetPage(); }
+    public function updatedSearch()
+    {
+        $this->resetPage();
+    }
+
+    public function updatedEventFilter()
+    {
+        $this->resetPage();
+    }
+
+    public function updatedCauserFilter()
+    {
+        $this->resetPage();
+    }
+
+    public function updatedPerPage()
+    {
+        $this->resetPage();
+    }
 
     public function clearFilters()
     {
@@ -52,7 +67,7 @@ class ManageAuditLogs extends Component
         $this->perPage = 10;
         $this->resetPage();
     }
-    
+
     public function showDetails($id)
     {
         $this->selectedActivity = Activity::with('causer', 'subject')->find($id);
@@ -76,7 +91,23 @@ class ManageAuditLogs extends Component
         if (!$activity->causer) {
             return __('System');
         }
+
         return $activity->causer->name;
+    }
+
+    public function getSubjectUserName(Activity $activity): string
+    {
+        $subject = $activity->subject;
+
+        if (!$subject) {
+            return __('Unknown');
+        }
+
+        if ($subject->user) {
+            return $subject->user->name;
+        }
+
+        return __('Unknown');
     }
 
     public function render()
@@ -85,7 +116,7 @@ class ManageAuditLogs extends Component
 
         if ($this->search) {
             $query->where('description', 'like', '%' . $this->search . '%')
-                  ->orWhere('properties', 'like', '%' . $this->search . '%');
+                ->orWhere('properties', 'like', '%' . $this->search . '%');
         }
 
         if ($this->eventFilter) {
@@ -98,9 +129,9 @@ class ManageAuditLogs extends Component
                     ->orWhere('last_name', 'like', '%' . $this->causerFilter . '%');
             });
         }
-        
-        $activities = $query->paginate((int) $this->perPage);
-        
+
+        $activities = $query->paginate((int)$this->perPage);
+
         $activities->appends([
             'search' => $this->search,
             'eventFilter' => $this->eventFilter,

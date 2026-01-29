@@ -7,7 +7,7 @@
         <div class="w-full max-w-md p-6">
             <div class="flex flex-col items-center gap-6 mb-6">
                 <a href="{{ route('home') }}" wire:navigate>
-                    <img src="{{ asset('img/logo.jpg') }}" alt="Logo" class="w-auto" />
+                    <img src="{{ asset('img/logo.svg') }}" alt="Logo" class="h-24 w-auto" />
                 </a>
             </div>
 

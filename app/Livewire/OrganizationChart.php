@@ -17,15 +17,12 @@ class OrganizationChart extends Component
 
     public $tree = [];
     public $usersWithoutManager = [];
-    
-    // Szerkesztés
     public $showEditModal = false;
     public $selectedUserId = null;
     public $selectedManagerId = null;
 
     public function mount()
     {
-        $this->authorize(PermissionType::VIEW_USERS->value);
         $this->loadTree();
     }
 

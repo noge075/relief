@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Enums\LeaveStatus;
 use App\Enums\LeaveType;
 use App\Enums\RoleType;
+use App\Models\AttendanceLog;
 use App\Models\LeaveRequest;
 use App\Models\MonthlyClosure;
 use App\Models\User;
@@ -90,33 +91,50 @@ class PayrollService
         [$users, $leaveRequests] = $this->getReportData($start, $end);
         $dayMap = $this->generateDayMap($start, $end);
 
+        $attendanceLogs = AttendanceLog::whereBetween('date', [$start, $end])
+            ->get()
+            ->keyBy(fn($log) => $log->user_id . '-' . $log->date);
+
         $report = collect();
 
         foreach ($dayMap as $dateStr => $dayInfo) {
             $currentDate = Carbon::parse($dateStr);
 
             foreach ($users as $user) {
-                $status = $dayInfo['is_workday'] ? 'Present' : 'Off';
+                $status = $dayInfo['is_workday'] ? 'Munakanap' : '-';
                 $meta = $dayInfo['meta'];
+                $checkIn = null;
+                $checkOut = null;
+                $workedHours = null;
 
                 if (isset($leaveRequests[$user->id])) {
                     foreach ($leaveRequests[$user->id] as $request) {
                         if ($currentDate->between($request->start_date, $request->end_date)) {
                             $status = ucfirst($request->type->value);
-                            $meta = $request->reason; // Assuming reason exists on model
+                            $meta = $request->reason;
                             break;
                         }
                     }
                 }
 
+                $attendanceLog = $attendanceLogs->get($user->id . '-' . $dateStr);
+                if ($attendanceLog) {
+                    $checkIn = $attendanceLog->check_in;
+                    $checkOut = $attendanceLog->check_out;
+                    $workedHours = $attendanceLog->worked_hours;
+                }
+
                 $report->push([
                     'date' => $dateStr,
                     'name' => $user->name,
-                    'employee_id' => "{$user->name} (ID: {$user->id})",
+                    'employee_id' => "{$user->name}",
                     'department' => $user->departments->pluck('name')->implode(', '),
                     'group' => $user->workSchedule->name ?? '-',
                     'status' => $status,
                     'meta' => $meta,
+                    'check_in' => $checkIn,
+                    'check_out' => $checkOut,
+                    'worked_hours' => $workedHours,
                 ]);
             }
         }

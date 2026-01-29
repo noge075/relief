@@ -25,10 +25,11 @@ class LeaveRequestRejectedNotification extends Notification implements ShouldQue
     {
         $start = $this->leaveRequest->start_date->format('Y-m-d');
         $end = $this->leaveRequest->end_date->format('Y-m-d');
+        $type = $this->leaveRequest->type->label();
 
         return (new MailMessage)
             ->subject(__('Leave Request Rejected'))
-            ->line(__('Your leave request has been rejected.'))
+            ->line(__('Your :type request has been rejected.', ['type' => $type]))
             ->line(__('Date: :start to :end', ['start' => $start, 'end' => $end]))
             ->line(__('Reason for rejection: :reason', ['reason' => $this->leaveRequest->manager_comment]))
             ->action(__('View My Requests'), route('my-requests.index'));
@@ -38,10 +39,12 @@ class LeaveRequestRejectedNotification extends Notification implements ShouldQue
     {
         $start = $this->leaveRequest->start_date->format('Y-m-d');
         $end = $this->leaveRequest->end_date->format('Y-m-d');
+        $type = $this->leaveRequest->type->label();
 
         return [
             'title' => __('Leave Request Rejected'),
-            'message' => __('Your leave request from :start to :end has been rejected. Reason: :reason', [
+            'message' => __('Your :type request from :start to :end has been rejected. Reason: :reason', [
+                'type' => $type,
                 'start' => $start,
                 'end' => $end,
                 'reason' => $this->leaveRequest->manager_comment,

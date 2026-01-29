@@ -6,7 +6,7 @@
         </div>
 
         <div class="grid gap-4">
-            <flux:input wire:model="date" type="date" label="{{ __('Date') }}" />
+            <flux:date-picker locale="hu-HU" wire:model="date" label="{{ __('Date') }}" />
 
             <flux:radio.group wire:model="type" label="{{ __('Type') }}">
                 <flux:radio value="holiday" label="{{ __('Holiday') }}" description="{{ __('Day off (e.g. bridge day)') }}" />

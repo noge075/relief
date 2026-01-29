@@ -64,15 +64,24 @@
                         @endforeach
                     </flux:select>
 
-                    <flux:select wire:model.live="role" label="{{ __('Role') }}">
+                    <flux:select wire:model="home_office_policy_id" label="{{ __('Home Office Policy') }}">
                         <flux:select.option value="">{{ __('Select...') }}</flux:select.option>
-                        @foreach($roles as $r)
-                            <flux:select.option value="{{ $r->name }}">
-                                {{ \App\Enums\RoleType::tryFrom($r->name)?->label() ?? ucfirst($r->name) }}
+                        @foreach($homeOfficePolicies as $policy)
+                            <flux:select.option value="{{ $policy->id }}">
+                                {{ $policy->type->label() }}
                             </flux:select.option>
                         @endforeach
                     </flux:select>
                 </div>
+
+                <flux:select wire:model.live="role" label="{{ __('Role') }}">
+                    <flux:select.option value="">{{ __('Select...') }}</flux:select.option>
+                    @foreach($roles as $r)
+                        <flux:select.option value="{{ $r->name }}">
+                            {{ \App\Enums\RoleType::tryFrom($r->name)?->label() ?? ucfirst($r->name) }}
+                        </flux:select.option>
+                    @endforeach
+                </flux:select>
 
                 <flux:input wire:model="password" type="password" label="{{ __('Password') }}"
                             description="{{ $isEditing ? __('Leave empty if you don\'t want to change it.') : __('Initial password for login.') }}"

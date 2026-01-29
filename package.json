@@ -17,6 +17,7 @@
     },
     "dependencies": {
         "signature_pad": "^5.1.3",
-        "sortablejs": "^1.15.6"
+        "sortablejs": "^1.15.6",
+        "trix": "^2.1.16"
     }
 }

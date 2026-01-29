@@ -35,6 +35,9 @@ class DailySheet implements FromCollection, WithHeadings, WithMapping, WithStyle
             'Részleg',
             'Státusz',
             'Megjegyzés',
+            'Munkakezdés',
+            'Munkabefejezés',
+            'Ledolgozott órák',
         ];
     }
 
@@ -46,6 +49,9 @@ class DailySheet implements FromCollection, WithHeadings, WithMapping, WithStyle
             $row['department'],
             $row['status'],
             $row['meta'] ?? '',
+            $row['check_in'] ?? '',
+            $row['check_out'] ?? '',
+            $row['worked_hours'] ?? '',
         ];
     }
 
@@ -58,6 +64,6 @@ class DailySheet implements FromCollection, WithHeadings, WithMapping, WithStyle
 
     public function title(): string
     {
-        return 'Daily';
+        return 'Napi bontás';
     }
 }

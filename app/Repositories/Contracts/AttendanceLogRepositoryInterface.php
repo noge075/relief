@@ -2,18 +2,23 @@
 
 namespace App\Repositories\Contracts;
 
+use App\Enums\AttendanceStatusType;
 use App\Models\AttendanceLog;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Collection;
 
 interface AttendanceLogRepositoryInterface extends BaseRepositoryInterface
 {
-    // A napi státuszfalhoz: Ki hol van egy adott napon?
-    // Opcionálisan szűrhető részlegre (Department)
     public function getDailyStatuses(string $date, ?int $departmentId = null): Collection;
 
-    // A havi exporthoz: Egy adott időszak összes adata
     public function getLogsForPeriod(string $startDate, string $endDate, ?int $userId = null): Collection;
 
-    // Tényadat rögzítése/frissítése (pl. amikor egy request approved lesz)
-    public function updateOrCreateLog(int $userId, string $date, string $status, ?float $hours = null): AttendanceLog;
+    public function updateOrCreateLog(
+        int                  $userId,
+        string               $date,
+        AttendanceStatusType $status,
+        ?float               $hours = null,
+        ?Carbon              $checkIn = null,
+        ?Carbon              $checkOut = null
+    ): AttendanceLog;
 }

@@ -75,6 +75,9 @@ class RoleService
         $updated = $this->roleRepository->update($id, ['name' => $data['name']]);
         
         if ($updated && isset($data['permissions'])) {
+            /**
+             * @var Role|null $role
+             */
             $role = $this->roleRepository->find($id);
             $this->roleRepository->syncPermissions($role, $data['permissions']);
         }
@@ -89,6 +92,9 @@ class RoleService
     
     public function getRole(int $id): ?Role
     {
+        /**
+         * @var Role|null
+         */
         return $this->roleRepository->find($id);
     }
 }

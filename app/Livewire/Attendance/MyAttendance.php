@@ -2,12 +2,16 @@
 
 namespace App\Livewire\Attendance;
 
+use App\Enums\AttendanceStatusType;
 use App\Models\AttendanceLog;
-use App\Services\AttendanceService;
+use App\Repositories\Contracts\AttendanceLogRepositoryInterface;
+use App\Services\HolidayService;
 use App\Services\PayrollService;
 use Carbon\Carbon;
+use Carbon\CarbonPeriod;
 use Flux\Flux;
 use Illuminate\Validation\ValidationException;
+use Livewire\Attributes\Computed;
 use Livewire\Component;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 
@@ -15,90 +19,123 @@ class MyAttendance extends Component
 {
     use AuthorizesRequests;
 
-    public $year;
-    public $month;
-    public $currentLog;
-    public $showEditModal = false;
+    // State
+    public int $year;
+    public int $month;
+    public bool $showEditModal = false;
+
+    // Form State
     public $editingDate;
     public $editingHours;
     public $editingCheckIn;
     public $editingCheckOut;
+    public ?AttendanceLog $editingLog = null;
 
-    protected AttendanceService $attendanceService;
+    protected $validationAttributes = [
+        'editingCheckIn' => 'Check In',
+        'editingCheckOut' => 'Check Out',
+    ];
+
+    protected AttendanceLogRepositoryInterface $attendanceLogRepository;
     protected PayrollService $payrollService;
+    protected HolidayService $holidayService;
 
     public function boot(
-        AttendanceService $attendanceService,
-        PayrollService $payrollService
+        AttendanceLogRepositoryInterface $attendanceLogRepository,
+        PayrollService $payrollService,
+        HolidayService $holidayService
     ) {
-        $this->attendanceService = $attendanceService;
+        $this->attendanceLogRepository = $attendanceLogRepository;
         $this->payrollService = $payrollService;
+        $this->holidayService = $holidayService;
     }
 
     public function mount(): void
     {
-        $this->year = Carbon::now()->year;
-        $this->month = Carbon::now()->month;
-        $this->loadCurrentLog();
+        $this->year = now()->year;
+        $this->month = now()->month;
     }
 
-    public function loadCurrentLog(): void
+
+    #[Computed]
+    public function selectedDate(): Carbon
     {
-        $this->currentLog = AttendanceLog::where('user_id', auth()->id())
-            ->where('date', Carbon::today())
-            ->whereNull('check_out')
-            ->latest()
-            ->first();
+        return Carbon::createFromDate($this->year, $this->month, 1);
     }
 
-    public function checkIn(): void
+    #[Computed]
+    public function isMonthClosed(): bool
     {
-        $this->validateMonthlyClosure(Carbon::today());
+        return $this->payrollService->isMonthClosed($this->year, $this->month);
+    }
 
-        AttendanceLog::create([
-            'user_id' => auth()->id(),
-            'date' => Carbon::today(),
-            'check_in' => Carbon::now(),
-            'status' => 'present',
+    #[Computed]
+    public function days()
+    {
+        $start = $this->selectedDate->copy()->startOfMonth();
+        $end = $this->selectedDate->copy()->endOfMonth();
+        $user = auth()->user()->load('workSchedule');
+
+        $logs = $this->attendanceLogRepository
+            ->getLogsForPeriod($start->toDateString(), $end->toDateString(), $user->id)
+            ->keyBy(fn ($log) => $log->date->toDateString());
+
+        $holidays = $this->holidayService->getHolidaysInRange($start, $end);
+
+        return collect(CarbonPeriod::create($start, $end))
+            ->map(fn (Carbon $date) => $this->resolveDayLog($date, $logs, $holidays, $user));
+    }
+
+    public function jumpToCurrentMonth(): void
+    {
+        $this->fill(['year' => now()->year, 'month' => now()->month]);
+    }
+
+    public function jumpToPreviousMonth(): void
+    {
+        $date = $this->selectedDate->subMonthNoOverflow();
+        $this->fill(['year' => $date->year, 'month' => $date->month]);
+    }
+
+    public function jumpToNextMonth(): void
+    {
+        $date = $this->selectedDate->addMonthNoOverflow();
+        $this->fill(['year' => $date->year, 'month' => $date->month]);
+    }
+
+    public function downloadPdf(): void
+    {
+        $url = route('attendance.download-pdf', [
+            'year' => $this->year,
+            'month' => $this->month,
         ]);
 
-        $this->loadCurrentLog();
-        Flux::toast(__('Checked in successfully.'), variant: 'success');
+        $this->dispatch('open-pdf-new-tab', url: $url);
     }
 
-    public function checkOut(): void
+    public function editLog(string $dateStr): void
     {
-        $this->validateMonthlyClosure(Carbon::today());
+        $date = Carbon::parse($dateStr);
+        $log = $this->attendanceLogRepository->getLogsForPeriod($dateStr, $dateStr, auth()->id())->first();
 
-        if ($this->currentLog) {
-            $checkOut = Carbon::now();
-            $workedHours = $this->currentLog->check_in->diffInHours($checkOut);
+        if (!$log) {
+            $schedule = auth()->user()->workSchedule;
+            $status = ($schedule && $schedule->isWorkday($date))
+                ? AttendanceStatusType::SCHEDULED
+                : AttendanceStatusType::OFF;
 
-            $this->currentLog->update([
-                'check_out' => $checkOut,
-                'worked_hours' => $workedHours,
-            ]);
-            
-            $this->loadCurrentLog();
-            Flux::toast(__('Checked out successfully.'), variant: 'success');
+            $log = new AttendanceLog(['date' => $date, 'status' => $status]);
         }
-    }
 
-    public function editLog($dateStr): void
-    {
+        $this->editingLog = $log;
         $this->editingDate = $dateStr;
-        $log = AttendanceLog::where('user_id', auth()->id())
-            ->where('date', $dateStr)
-            ->first();
 
-        if ($log) {
+        if ($log->exists) {
             $this->editingHours = $log->worked_hours;
-            $this->editingCheckIn = $log->check_in ? $log->check_in->format('H:i') : null;
-            $this->editingCheckOut = $log->check_out ? $log->check_out->format('H:i') : null;
+            $this->editingCheckIn = $log->check_in?->format('H:i');
+            $this->editingCheckOut = $log->check_out?->format('H:i');
         } else {
-            $this->editingHours = null;
-            $this->editingCheckIn = null;
-            $this->editingCheckOut = null;
+            $this->applyWorkScheduleDefaults($date);
         }
 
         $this->showEditModal = true;
@@ -107,52 +144,142 @@ class MyAttendance extends Component
     public function saveLog(): void
     {
         $date = Carbon::parse($this->editingDate);
-        $this->validateMonthlyClosure($date);
+        $logToCheck = $this->attendanceLogRepository->getLogsForPeriod(
+            $this->editingDate,
+            $this->editingDate,
+            auth()->id()
+        )->first();
 
-        $this->validate([
-            'editingCheckIn' => 'nullable|date_format:H:i',
-            'editingCheckOut' => 'nullable|date_format:H:i|after:editingCheckIn',
-        ]);
+        if (!$logToCheck) {
+            $schedule = auth()->user()->workSchedule;
+            $status = ($schedule && $schedule->isWorkday($date))
+                ? AttendanceStatusType::SCHEDULED
+                : AttendanceStatusType::OFF;
+
+            $logToCheck = new AttendanceLog([
+                'user_id' => auth()->id(),
+                'date' => $date,
+                'status' => $status
+            ]);
+        }
+
+        if (!$this->canEditLog($logToCheck)) {
+            Flux::toast(__('You cannot edit this day.'), variant: 'danger');
+            $this->showEditModal = false;
+            return;
+        }
+
+        try {
+            $this->validateLogData();
+        } catch (ValidationException $e) {
+            Flux::toast(__('Check-in/out times must be strictly within work schedule.'), variant: 'danger');
+            throw $e;
+        }
 
         $checkIn = $this->editingCheckIn ? $date->copy()->setTimeFromTimeString($this->editingCheckIn) : null;
         $checkOut = $this->editingCheckOut ? $date->copy()->setTimeFromTimeString($this->editingCheckOut) : null;
+        $workedHours = ($checkIn && $checkOut) ? $checkIn->floatDiffInHours($checkOut) : 0;
 
-        $workedHours = 0;
-        if ($checkIn && $checkOut) {
-            $workedHours = $checkIn->floatDiffInHours($checkOut);
-        }
-
-        AttendanceLog::updateOrCreate(
-            [
-                'user_id' => auth()->id(),
-                'date' => $this->editingDate,
-            ],
-            [
-                'check_in' => $checkIn,
-                'check_out' => $checkOut,
-                'worked_hours' => $workedHours,
-                'status' => 'present',
-            ]
+        $this->attendanceLogRepository->updateOrCreateLog(
+            auth()->id(),
+            $this->editingDate,
+            AttendanceStatusType::PRESENT,
+            $workedHours,
+            $checkIn,
+            $checkOut
         );
 
         Flux::toast(__('Attendance updated successfully.'), variant: 'success');
         $this->showEditModal = false;
-        $this->loadCurrentLog();
     }
 
-    protected function validateMonthlyClosure(Carbon $date): void
+    private function resolveDayLog(Carbon $date, $existingLogs, $holidays, $user): AttendanceLog
     {
-        if ($this->payrollService->isMonthClosed($date->year, $date->month)) {
-            throw ValidationException::withMessages([
-                'date' => __('This month is closed and cannot be modified.')
-            ]);
+        $dateStr = $date->toDateString();
+
+        if ($existingLogs->has($dateStr)) {
+            $log = $existingLogs->get($dateStr);
+            if ($log->status === AttendanceStatusType::PRESENT && !$log->check_in) {
+                $log->status = AttendanceStatusType::SCHEDULED;
+            }
+            return $log;
+        }
+
+        $status = match(true) {
+            isset($holidays[$dateStr]) => AttendanceStatusType::HOLIDAY,
+            $date->isWeekend() => AttendanceStatusType::WEEKEND,
+            $user->workSchedule?->isWorkday($date) => AttendanceStatusType::SCHEDULED,
+            default => AttendanceStatusType::OFF,
+        };
+
+        $log = new AttendanceLog(['user_id' => $user->id, 'date' => $date, 'status' => $status]);
+
+        if ($status === AttendanceStatusType::HOLIDAY) {
+            $log->holiday_name = $holidays[$dateStr]['name'] ?? __('Holiday');
+        }
+
+        return $log;
+    }
+
+    private function applyWorkScheduleDefaults(Carbon $date): void
+    {
+        $schedule = auth()->user()->workSchedule;
+
+        if ($schedule && $schedule->isWorkday($date)) {
+            $this->editingCheckIn = $schedule->start_time ? Carbon::parse($schedule->start_time)->format('H:i') : null;
+            $this->editingCheckOut = $schedule->end_time ? Carbon::parse($schedule->end_time)->format('H:i') : null;
+        } else {
+            $this->reset(['editingHours', 'editingCheckIn', 'editingCheckOut']);
         }
     }
-    
+
+    private function validateLogData(): void
+    {
+        $schedule = auth()->user()->workSchedule;
+
+        $start = $schedule?->start_time ? Carbon::parse($schedule->start_time)->format('H:i') : '00:00';
+        $end = $schedule?->end_time ? Carbon::parse($schedule->end_time)->format('H:i') : '23:59';
+
+        $this->validate([
+            'editingCheckIn' => [
+                'nullable',
+                'date_format:H:i',
+                "after_or_equal:{$start}"
+            ],
+            'editingCheckOut' => [
+                'nullable',
+                'date_format:H:i',
+                "before_or_equal:{$end}",
+                'after:editingCheckIn'
+            ],
+        ], [
+            'editingCheckIn.after_or_equal' => __("Too early. Work starts at :time.", ['time' => $start]),
+            'editingCheckOut.before_or_equal' => __("Too late. Work ends at :time.", ['time' => $end]),
+        ]);
+    }
+
+    public function canEditLog(?AttendanceLog $log): bool
+    {
+        if (!$log || empty($log->date)) return false;
+        $date = $log->date instanceof Carbon ? $log->date : Carbon::parse($log->date);
+
+        if ($this->payrollService->isMonthClosed($date->year, $date->month)) {
+            return false;
+        }
+
+        if (auth()->user()->hasRole('super-admin')) return true;
+
+        return in_array($log->status, [
+            AttendanceStatusType::PRESENT,
+            AttendanceStatusType::SCHEDULED,
+            AttendanceStatusType::OFF
+        ]);
+    }
+
     public function render()
     {
         return view('livewire.attendance.my-attendance', [
-            'days' => $this->attendanceService->getAttendanceData(auth()->user(), $this->year, $this->month)
+            'days' => $this->days
         ])->title(__('Attendance'));
     }
 }

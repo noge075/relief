@@ -3,28 +3,38 @@
 namespace App\Http\Controllers;
 
 use App\Services\AttendanceService;
-use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class AttendanceController extends Controller
 {
     public function __construct(
-        protected AttendanceService $attendanceService
+        private AttendanceService $attendanceService,
     ) {}
 
-    public function downloadPdf($year, $month)
+    public function downloadPdf(Request $request)
     {
         $user = Auth::user();
-        
-        $days = $this->attendanceService->getAttendanceData($user, $year, $month);
+        $year = (int)$request->query('year', now()->year);
+        $month = (int)$request->query('month', now()->month);
 
-        $filename = 'attendance_' . $user->id . '_' . $year . '_' . str_pad($month, 2, '0', STR_PAD_LEFT) . '.pdf';
+        $document = $this->attendanceService->createAndStorePdf($user, $year, $month);
+        $media = $document->getFirstMedia('signed_sheets');
 
-        return Pdf::loadView('pdf.attendance-sheet', [
-            'days' => $days,
-            'user' => $user,
-            'year' => $year,
-            'month' => $month,
-        ])->stream($filename);
+        if (! $media) {
+            abort(404, 'Generated document not found.');
+        }
+
+        $path = $media->getPath();
+
+        if (!file_exists($path)) {
+            abort(404, 'File not found on disk.');
+        }
+
+        return response(file_get_contents($path), 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="' . $media->file_name . '"',
+            'Cache-Control' => 'no-cache, no-store, must-revalidate',
+        ]);
     }
 }

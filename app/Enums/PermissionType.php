@@ -25,7 +25,6 @@ enum PermissionType: string
     case VIEW_LEAVE_BALANCES = 'view leave balances';
     case VIEW_ALL_LEAVE_BALANCES = 'view all leave balances';
     case ADJUST_LEAVE_BALANCES = 'adjust leave balances';
-    
     case VIEW_LEAVE_REQUESTS = 'view leave requests';
     case VIEW_ALL_LEAVE_REQUESTS = 'view all leave requests';
     case VIEW_LEAVE_REQUEST_DETAILS = 'view leave request details';
@@ -34,22 +33,28 @@ enum PermissionType: string
     case APPROVE_LEAVE_REQUESTS = 'approve leave requests';
     case DELETE_LEAVE_REQUESTS = 'delete leave requests';
 
-    // Attendance
+    // Attendance Management
     case VIEW_ATTENDANCE = 'view attendance';
     case MANAGE_ATTENDANCE = 'manage attendance';
     case EXPORT_ATTENDANCE = 'export attendance';
+
+    // Status Board
     case VIEW_STATUS_BOARD = 'view status board';
 
-    // Documents
+    // Document Management
     case VIEW_DOCUMENTS = 'view documents';
     case UPLOAD_DOCUMENTS = 'upload documents';
     case DELETE_DOCUMENTS = 'delete documents';
 
-    // Payroll
+    // Payroll Management
     case VIEW_PAYROLL_DATA = 'view payroll data';
     case MANAGE_MONTHLY_CLOSURES = 'manage monthly closures';
 
-    // System
-    case VIEW_AUDIT_LOGS = 'view audit logs';
+    // System Settings
     case MANAGE_SETTINGS = 'manage settings';
+    case VIEW_AUDIT_LOGS = 'view audit logs';
+    case MANAGE_HOME_OFFICE_POLICIES = 'manage home office policies';
+
+    // Bulk Email
+    case SEND_BULK_EMAILS = 'send bulk emails';
 }

@@ -15,16 +15,16 @@ class EloquentSpecialDayRepository extends BaseRepository implements SpecialDayR
 
     public function getByYear(int $year): Collection
     {
-        return SpecialDay::whereYear('date', $year)->get();
+        return $this->model::whereYear('date', $year)->get();
     }
 
     public function findByDate(string $date): ?SpecialDay
     {
-        return SpecialDay::where('date', $date)->first();
+        return $this->model::where('date', $date)->first();
     }
 
     public function getInRange(string $startDate, string $endDate): Collection
     {
-        return SpecialDay::whereBetween('date', [$startDate, $endDate])->get();
+        return $this->model::whereBetween('date', [$startDate, $endDate])->get();
     }
 }

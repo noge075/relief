@@ -24,6 +24,8 @@ class ManageWorkSchedules extends Component
     public $showModal = false;
     public $editingId = null;
     public $name = '';
+    public $start_time = '08:00';
+    public $end_time = '16:30';
     public $weeklyPattern = [
         'monday' => 8,
         'tuesday' => 8,
@@ -55,7 +57,7 @@ class ManageWorkSchedules extends Component
     public function create()
     {
         $this->authorize(PermissionType::MANAGE_WORK_SCHEDULES->value);
-        $this->reset(['editingId', 'name']);
+        $this->reset(['editingId', 'name', 'start_time', 'end_time']);
         $this->weeklyPattern = [
             'monday' => 8, 'tuesday' => 8, 'wednesday' => 8, 'thursday' => 8, 'friday' => 8, 'saturday' => 0, 'sunday' => 0
         ];
@@ -69,6 +71,8 @@ class ManageWorkSchedules extends Component
         if ($schedule) {
             $this->editingId = $schedule->id;
             $this->name = $schedule->name;
+            $this->start_time = $schedule->start_time;
+            $this->end_time = $schedule->end_time;
             $this->weeklyPattern = $schedule->weekly_pattern;
             $this->showModal = true;
         }
@@ -80,11 +84,15 @@ class ManageWorkSchedules extends Component
         
         $this->validate([
             'name' => 'required|string|max:255',
+            'start_time' => 'required|date_format:H:i',
+            'end_time' => 'required|date_format:H:i|after:start_time',
             'weeklyPattern.*' => 'required|numeric|min:0|max:24',
         ]);
 
         $data = [
             'name' => $this->name,
+            'start_time' => $this->start_time,
+            'end_time' => $this->end_time,
             'weekly_pattern' => $this->weeklyPattern,
         ];
 

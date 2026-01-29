@@ -19,8 +19,8 @@ class ManageRoles extends Component
     use AuthorizesRequests;
 
     public $search = '';
-    public $perPage = 10; // Új
-    
+    public $perPage = 10;
+
     public $showModal = false;
     public $isEditing = false;
     public $editingId = null;
@@ -28,7 +28,7 @@ class ManageRoles extends Component
     // Form
     public $name = '';
     public $selectedPermissions = [];
-    public $permissions = []; // Grouped permissions for the form
+    public $permissions = [];
 
     protected RoleService $roleService;
 
@@ -37,22 +37,29 @@ class ManageRoles extends Component
         'selectedPermissions' => 'array',
     ];
 
-    public function boot(RoleService $roleService)
+    public function boot(RoleService $roleService): void
     {
         $this->roleService = $roleService;
     }
 
-    public function mount()
+    public function mount(): void
     {
         $this->authorize(PermissionType::MANAGE_SETTINGS->value);
         $this->sortCol = 'name';
         $this->permissions = $this->roleService->getGroupedPermissions();
     }
 
-    public function updatedSearch() { $this->resetPage(); }
-    public function updatedPerPage() { $this->resetPage(); } // Új
+    public function updatedSearch(): void
+    {
+        $this->resetPage();
+    }
 
-    public function create()
+    public function updatedPerPage(): void
+    {
+        $this->resetPage();
+    }
+
+    public function create(): void
     {
         $this->authorize(PermissionType::MANAGE_SETTINGS->value);
         $this->reset(['editingId', 'name', 'selectedPermissions']);
@@ -60,65 +67,64 @@ class ManageRoles extends Component
         $this->showModal = true;
     }
 
-    public function edit($id)
+    public function edit($id): void
     {
         $this->authorize(PermissionType::MANAGE_SETTINGS->value);
         $this->reset(['name', 'selectedPermissions']);
         $this->isEditing = true;
         $this->editingId = $id;
 
-        $role = Role::findById($id);
+        $role = $this->roleService->getRole($id);
         $this->name = $role->name;
         $this->selectedPermissions = $role->permissions->pluck('name')->toArray();
 
         $this->showModal = true;
     }
 
-    public function save()
+    public function save(): void
     {
         $this->authorize(PermissionType::MANAGE_SETTINGS->value);
-        
+
         if ($this->isEditing) {
             $this->rules['name'] = 'required|string|min:3|unique:roles,name,' . $this->editingId;
         }
 
         $this->validate();
 
+        $data = [
+            'name' => $this->name,
+            'permissions' => $this->selectedPermissions,
+        ];
+
         if ($this->isEditing) {
-            $role = Role::findById($this->editingId);
-            $role->update(['name' => $this->name]);
-            $role->syncPermissions($this->selectedPermissions);
+            $this->roleService->updateRole($this->editingId, $data);
             Flux::toast(__('Role updated successfully.'), variant: 'success');
         } else {
-            $role = Role::create(['name' => $this->name]);
-            $role->syncPermissions($this->selectedPermissions);
+            $this->roleService->createRole($data);
             Flux::toast(__('Role created successfully.'), variant: 'success');
         }
 
         $this->showModal = false;
     }
 
-    public function delete($id)
+    public function delete($id): void
     {
         $this->authorize(PermissionType::MANAGE_SETTINGS->value);
-        $role = Role::findById($id);
-        $role->delete();
+        $this->roleService->deleteRole($id);
         Flux::toast(__('Role deleted.'), variant: 'danger');
     }
 
     public function render()
     {
-        $query = Role::query();
-
-        if ($this->search) {
-            $query->where('name', 'like', '%' . $this->search . '%');
-        }
-
-        $query->withCount('permissions');
-        $query->orderBy($this->sortCol, $this->sortAsc ? 'asc' : 'desc');
+        $roles = $this->roleService->getPaginatedRoles(
+            $this->perPage,
+            $this->search,
+            $this->sortCol,
+            $this->sortAsc
+        );
 
         return view('livewire.roles.manage-roles', [
-            'roles' => $query->paginate($this->perPage) // Új
+            'roles' => $roles,
         ])->title(__('Roles & Permissions'));
     }
 }

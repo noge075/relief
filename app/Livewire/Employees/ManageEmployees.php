@@ -12,6 +12,7 @@ use App\Services\UserService;
 use App\Models\Department;
 use App\Models\User;
 use App\Models\WorkSchedule;
+use App\Models\HomeOfficePolicy;
 use Flux\Flux;
 use Livewire\Component;
 use Livewire\WithPagination;
@@ -36,6 +37,7 @@ class ManageEmployees extends Component
     public $statusFilter = null;
     public $employmentTypeFilter = null;
     public $workScheduleFilter = null;
+    public $homeOfficePolicyFilter = null;
     public $editingId = null;
     public $last_name = '';
     public $first_name = '';
@@ -44,6 +46,7 @@ class ManageEmployees extends Component
     public $selectedDepartmentIds = [];
     public $work_schedule_id = null;
     public $employment_type = null;
+    public $home_office_policy_id = null;
     public $role;
     public $id_card_number = '';
     public $tax_id = '';
@@ -66,6 +69,7 @@ class ManageEmployees extends Component
         'statusFilter' => ['except' => null],
         'employmentTypeFilter' => ['except' => null],
         'workScheduleFilter' => ['except' => null],
+        'homeOfficePolicyFilter' => ['except' => null],
         'sortCol' => ['except' => 'last_name'],
         'sortAsc' => ['except' => true],
     ];
@@ -109,6 +113,12 @@ class ManageEmployees extends Component
     {
         $this->resetPage();
     }
+
+    public function updatedHomeOfficePolicyFilter(): void
+    {
+        $this->resetPage();
+    }
+
 
     public function updatedPerPage(): void
     {
@@ -167,6 +177,7 @@ class ManageEmployees extends Component
         $this->statusFilter = null;
         $this->employmentTypeFilter = null;
         $this->workScheduleFilter = null;
+        $this->homeOfficePolicyFilter = null;
         $this->perPage = 10;
         $this->resetPage();
     }
@@ -199,6 +210,7 @@ class ManageEmployees extends Component
             'status' => $this->statusFilter,
             'employment_type' => $this->employmentTypeFilter,
             'work_schedule_id' => $this->workScheduleFilter,
+            'home_office_policy_id' => $this->homeOfficePolicyFilter,
         ];
 
         $users = $userService->getEmployeesList(auth()->user(), (int)$this->perPage, $filters, $this->sortCol, $this->sortAsc);
@@ -211,6 +223,7 @@ class ManageEmployees extends Component
             'statusFilter' => $this->statusFilter,
             'employmentTypeFilter' => $this->employmentTypeFilter,
             'workScheduleFilter' => $this->workScheduleFilter,
+            'homeOfficePolicyFilter' => $this->homeOfficePolicyFilter,
             'sortCol' => $this->sortCol,
             'sortAsc' => $this->sortAsc,
         ]);
@@ -221,6 +234,7 @@ class ManageEmployees extends Component
             'schedules' => WorkSchedule::all(),
             'roles' => Role::all(),
             'employmentTypes' => EmploymentType::cases(),
+            'homeOfficePolicies' => HomeOfficePolicy::all(),
         ])->title(__('Employees'));
     }
 
@@ -247,6 +261,7 @@ class ManageEmployees extends Component
         $this->selectedDepartmentIds = $user->departments->pluck('id')->toArray();
         $this->work_schedule_id = $user->work_schedule_id;
         $this->employment_type = $user->employment_type?->value;
+        $this->home_office_policy_id = $user->home_office_policy_id;
         $this->role = $user->roles->first()?->name ?? null;
 
         $this->id_card_number = $user->id_card_number;
@@ -280,6 +295,7 @@ class ManageEmployees extends Component
             'selectedDepartmentIds.*' => 'exists:departments,id',
             'work_schedule_id' => 'nullable|exists:work_schedules,id',
             'employment_type' => 'required',
+            'home_office_policy_id' => 'nullable|exists:home_office_policies,id',
             'role' => 'required|exists:roles,name',
             'selectedPermissions' => 'array',
             'id_card_number' => 'nullable|string|max:20',
@@ -299,6 +315,7 @@ class ManageEmployees extends Component
 
         $validated['permissions'] = $this->selectedPermissions;
         $validated['departments'] = $this->selectedDepartmentIds;
+        $validated['home_office_policy_id'] = $this->home_office_policy_id;
 
         if ($this->isEditing) {
             $userService->updateEmployee($this->editingId, $validated);
@@ -369,7 +386,7 @@ class ManageEmployees extends Component
     {
         $this->reset([
             'last_name', 'first_name', 'email', 'password',
-            'selectedDepartmentIds', 'work_schedule_id', 'employment_type', 'role',
+            'selectedDepartmentIds', 'work_schedule_id', 'employment_type', 'home_office_policy_id', 'role',
             'editingId', 'selectedPermissions',
             'id_card_number', 'tax_id', 'ssn', 'address', 'phone',
             'documentUpload', 'userDocuments'

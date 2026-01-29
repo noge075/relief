@@ -118,8 +118,7 @@ class User extends Authenticatable implements HasMedia
         return $this->belongsTo(WorkSchedule::class);
     }
 
-    // Hierarchia
-    public function manager()
+    public function manager(): BelongsTo
     {
         return $this->belongsTo(User::class, 'manager_id');
     }
@@ -129,7 +128,6 @@ class User extends Authenticatable implements HasMedia
         return $this->hasMany(User::class, 'manager_id');
     }
 
-    // Szabadság modul
     public function leaveBalances()
     {
         return $this->hasMany(LeaveBalance::class);
@@ -140,20 +138,23 @@ class User extends Authenticatable implements HasMedia
         return $this->hasMany(LeaveRequest::class);
     }
 
-    // Dokumentumok
     public function attendanceDocuments()
     {
         return $this->hasMany(AttendanceDocument::class);
     }
 
-    // Impersonate jogosultság
-    public function canImpersonate()
+    public function canImpersonate(): bool
     {
         return $this->can(PermissionType::VIEW_USERS->value) || $this->can(PermissionType::VIEW_ALL_USERS->value);
     }
 
-    public function canBeImpersonated()
+    public function canBeImpersonated(): bool
     {
         return !$this->hasRole('super-admin');
+    }
+
+    public function homeOfficePolicy(): BelongsTo
+    {
+        return $this->belongsTo(HomeOfficePolicy::class);
     }
 }

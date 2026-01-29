@@ -4,6 +4,9 @@
             <flux:heading size="xl">{{ __('Company Directory') }}</flux:heading>
             <flux:subheading>{{ __('Find and connect with your colleagues.') }}</flux:subheading>
         </div>
+        @can(\App\Enums\PermissionType::SEND_BULK_EMAILS->value)
+            <flux:button variant="primary" icon="envelope" wire:click="openBulkEmailModal">{{ __('Send Bulk Email') }}</flux:button>
+        @endcan
     </div>
 
     <!-- Toolbar -->
@@ -79,4 +82,50 @@
             {{ $users->links('pagination.buttons') }}
         </div>
     </div>
+
+    <!-- Bulk Email Modal -->
+    <flux:modal wire:model="showBulkEmailModal" class="min-w-200">
+        <div class="space-y-6">
+            <div>
+                <flux:heading size="lg">{{ __('Send Bulk Email') }}</flux:heading>
+                <flux:subheading>{{ __('Send an email to multiple users.') }}</flux:subheading>
+            </div>
+
+            <div class="grid gap-4">
+                <div class="flex justify-end">
+                    <flux:button wire:click="toggleSelectAll" variant="ghost" size="sm">
+                        @if(count($selectedUserIds) === \App\Models\User::where('is_active', true)->count())
+                            {{ __('Deselect All') }}
+                        @else
+                            {{ __('Select All') }}
+                        @endif
+                    </flux:button>
+                </div>
+                <flux:select indicator="checkbox" variant="listbox" multiple
+                        wire:model="selectedUserIds" label="{{ __('Recipients') }}" placeholder="{{ __('Select users...') }}">
+                    @foreach($allUsers as $user)
+                        <flux:select.option value="{{ $user->id }}">{{ $user->name }}</flux:select.option>
+                    @endforeach
+                </flux:select>
+
+                <flux:input wire:model="emailSubject" label="{{ __('Subject') }}" />
+
+                <div wire:ignore>
+                    <label for="emailBody" class="block text-sm font-medium text-zinc-700 dark:text-zinc-300">{{ __('Message') }}</label>
+                    <input id="emailBody" type="hidden" name="emailBody" value="{{ $emailBody }}">
+                    <trix-editor input="emailBody"
+                                 class="mt-1 block w-full rounded-md border-zinc-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 dark:bg-zinc-800 dark:border-zinc-700 dark:text-zinc-200 trix-content"
+                                 style="min-height: 300px;"
+                                 x-data
+                                 x-on:trix-change="$wire.set('emailBody', $event.target.value)"
+                    ></trix-editor>
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-2">
+                <flux:button wire:click="$set('showBulkEmailModal', false)" variant="ghost">{{ __('Cancel') }}</flux:button>
+                <flux:button wire:click="sendBulkEmail" variant="primary">{{ __('Send Email') }}</flux:button>
+            </div>
+        </div>
+    </flux:modal>
 </div>

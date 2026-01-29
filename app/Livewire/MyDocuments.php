@@ -2,6 +2,9 @@
 
 namespace App\Livewire;
 
+use App\Models\AttendanceDocument;
+use App\Models\User;
+use App\Repositories\Contracts\AttendanceDocumentRepositoryInterface;
 use Flux\Flux;
 use Livewire\Component;
 use Livewire\WithFileUploads;
@@ -17,6 +20,13 @@ class MyDocuments extends Component
 
     public $upload;
     public $collection = 'personal_documents';
+
+    protected AttendanceDocumentRepositoryInterface $attendanceDocumentRepository;
+
+    public function boot(AttendanceDocumentRepositoryInterface $attendanceDocumentRepository)
+    {
+        $this->attendanceDocumentRepository = $attendanceDocumentRepository;
+    }
 
     public function save()
     {
@@ -36,9 +46,13 @@ class MyDocuments extends Component
     {
         $media = Media::find($id);
 
-        if ($media && $media->model_id === auth()->id() && $media->model_type === \App\Models\User::class) {
+        if (!$media) return;
+
+        if ($media->model_type === User::class && $media->model_id === auth()->id()) {
             $media->delete();
             Flux::toast(__('Document deleted.'), variant: 'success');
+        } else {
+            Flux::toast(__('System generated documents cannot be deleted manually.'), variant: 'danger');
         }
     }
 
@@ -46,14 +60,24 @@ class MyDocuments extends Component
     {
         $media = Media::find($id);
 
-        if ($media && $media->model_id === auth()->id() && $media->model_type === \App\Models\User::class) {
+        if (!$media) abort(404);
+
+        $userId = auth()->id();
+        $isOwnPersonalDoc = $media->model_type === User::class && $media->model_id === auth()->id();
+
+        $isOwnAttendanceDoc = $media->model_type === AttendanceDocument::class &&
+            $this->attendanceDocumentRepository->belongsToUser($media->model_id, $userId);
+
+        if ($isOwnPersonalDoc || $isOwnAttendanceDoc) {
             return response()->download($media->getPath(), $media->file_name);
         }
+
+        abort(403);
     }
 
     public function render()
     {
-        $documents = auth()->user()->getMedia($this->collection);
+        $documents = $this->attendanceDocumentRepository->getAllMediaForUser(auth()->id());
 
         return view('livewire.my-documents', [
             'documents' => $documents

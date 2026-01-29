@@ -2,207 +2,193 @@
 
 namespace App\Services;
 
-use App\Enums\EmploymentType;
+use App\Enums\AttendanceStatusType;
 use App\Enums\LeaveStatus;
 use App\Enums\LeaveType;
+use App\Models\AttendanceDocument;
 use App\Models\AttendanceLog;
 use App\Models\User;
-use App\Repositories\Contracts\LeaveRequestRepositoryInterface;
+use App\Repositories\Contracts\AttendanceDocumentRepositoryInterface;
+use App\Repositories\Contracts\AttendanceLogRepositoryInterface;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Carbon\CarbonPeriod;
-use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
 
 class AttendanceService
 {
-    protected const string DEFAULT_START_TIME = '09:00';
-    protected const string DEFAULT_END_TIME = '17:00';
-    protected const int DEFAULT_WORK_HOURS = 8;
-
     public function __construct(
-        protected LeaveRequestRepositoryInterface $leaveRequestRepository,
-        protected HolidayService $holidayService
-    ) {}
-
-    /**
-     * Build the daily attendance report for a given month.
-     */
-    public function getAttendanceData(User $user, int $year, int $month): array
+        protected HolidayService                        $holidayService,
+        protected AttendanceLogRepositoryInterface      $attendanceLogRepository,
+        protected AttendanceDocumentRepositoryInterface $attendanceDocumentRepository
+    )
     {
-        $start = Carbon::createFromDate($year, $month, 1)->startOfMonth();
-        $end = $start->copy()->endOfMonth();
-
-        // 1. Pre-fetch all necessary data to avoid N+1 queries in loop
-        $context = [
-            'logs' => $this->getLogsKeyedByDate($user->id, $start, $end),
-            'leaves' => $this->getApprovedLeaves($user->id, $start, $end),
-            'holidays' => $this->holidayService->getHolidaysInRange($start, $end),
-            'extra_workdays' => $this->holidayService->getExtraWorkdaysInRange($start, $end),
-            'schedule' => $user->workSchedule?->weekly_pattern,
-        ];
-
-        // 2. Generate days
-        $days = [];
-        $period = CarbonPeriod::create($start, $end);
-
-        foreach ($period as $date) {
-            $days[] = $this->processDay($date, $user, $context);
-        }
-
-        return $days;
     }
 
-    /**
-     * Process a single day logic.
-     */
-    protected function processDay(Carbon $date, User $user, array $context): array
+    public function createAndStorePdf(User $user, int $year, int $month): AttendanceDocument
     {
-        $dateStr = $date->format('Y-m-d');
+        $data = $this->getMonthlyAttendanceData($user, $year, $month);
 
-        // Base structure
-        $dayData = [
-            'date' => $date,
-            'is_weekend' => $date->isWeekend(),
-            'is_today' => $date->isToday(),
-            'is_holiday' => isset($context['holidays'][$dateStr]),
-            'check_in' => null,
-            'check_out' => null,
-            'worked_hours' => null,
-            'status' => null,
-            'status_type' => null,
-        ];
+        $pdf = Pdf::loadView('pdf.attendance-sheet', [
+            'user' => $user,
+            'days' => $data['days'],
+            'year' => $year,
+            'monthName' => $data['monthName'],
+            'summaryStats' => $data['summaryStats'],
+        ]);
 
-        // Determine if it should be a workday based on schedule/holidays
-        $isScheduled = $this->isScheduledWorkday(
-            $date,
-            $context['schedule'],
-            $dayData['is_holiday'],
-            isset($context['extra_workdays'][$dateStr])
+        return $this->storePdfRaw(
+            $year,
+            $month,
+            $data['filename'],
+            $pdf->output(),
+            $user
         );
-
-        // Priority 1: Actual Attendance Log exists
-        if ($log = $context['logs']->get($dateStr)) {
-            return $this->applyLogData($dayData, $log);
-        }
-
-        // Priority 2: Approved Leave exists
-        if ($leave = $this->findLeaveForDate($date, $context['leaves'])) {
-            return $this->applyLeaveData($dayData, $leave, $context['schedule']);
-        }
-
-        // Priority 3: No Log, No Leave (Default Schedule Logic)
-        return $this->applyScheduleData($dayData, $user, $isScheduled, $context['holidays'], $context['schedule']);
     }
 
-    /**
-     * Logic to determine if a specific date is a working day.
-     */
-    protected function isScheduledWorkday(Carbon $date, ?array $weeklyPattern, bool $isHoliday, bool $isExtraWorkday): bool
+    public function getMonthlyAttendanceData(User $user, int $year, int $month): array
     {
-        if ($isExtraWorkday) {
-            return true;
-        }
+        $startOfMonth = Carbon::create($year, $month, 1)->startOfMonth();
+        $endOfMonth = $startOfMonth->copy()->endOfMonth();
 
-        if ($isHoliday) {
-            return false;
-        }
+        $existingLogs = $this->attendanceLogRepository->getLogsForPeriod(
+            $startOfMonth->toDateString(),
+            $endOfMonth->toDateString(),
+            $user->id
+        )->keyBy(fn($log) => $log->date->toDateString());
 
-        // If no custom pattern, fallback to standard M-F
-        if (empty($weeklyPattern)) {
-            return !$date->isWeekend();
-        }
+        $holidays = $this->holidayService->getHolidaysInRange($startOfMonth, $endOfMonth);
 
-        $dayName = strtolower($date->format('l'));
-        return isset($weeklyPattern[$dayName]) && $weeklyPattern[$dayName] > 0;
-    }
+        $days = collect(CarbonPeriod::create($startOfMonth, $endOfMonth))->map(function (Carbon $date) use ($existingLogs, $holidays, $user) {
+            $dateString = $date->toDateString();
 
-    protected function applyLogData(array $data, AttendanceLog $log): array
-    {
-        $data['check_in'] = $log->check_in?->format('H:i') ?? '-';
-        $data['check_out'] = $log->check_out?->format('H:i') ?? '-';
-        $data['worked_hours'] = $log->worked_hours;
-        $data['status'] = __($log->status);
-        $data['status_type'] = $log->status;
+            if ($existingLogs->has($dateString)) {
+                $log = $existingLogs->get($dateString);
 
-        return $data;
-    }
+                if ($log->status === AttendanceStatusType::PRESENT && is_null($log->check_in)) {
+                    $log->status = AttendanceStatusType::SCHEDULED;
+                }
+            } else {
+                $status = AttendanceStatusType::OFF;
 
-    protected function applyLeaveData(array $data, $leave, ?array $weeklyPattern): array
-    {
-        $data['status'] = ucfirst($leave->type->value);
-        $data['status_type'] = $leave->type->value;
+                if (isset($holidays[$dateString])) {
+                    $status = AttendanceStatusType::HOLIDAY;
+                } elseif ($date->isWeekend()) {
+                    $status = AttendanceStatusType::WEEKEND;
+                } elseif ($user->workSchedule && $user->workSchedule->isWorkday($date)) {
+                    $status = AttendanceStatusType::SCHEDULED;
+                }
 
-        // Home Office is treated as a worked day in terms of hours
-        if ($leave->type === LeaveType::HOME_OFFICE) {
-            $dayName = strtolower($data['date']->format('l'));
-
-            $data['worked_hours'] = $weeklyPattern[$dayName] ?? self::DEFAULT_WORK_HOURS;
-            $data['check_in'] = self::DEFAULT_START_TIME;
-            $data['check_out'] = self::DEFAULT_END_TIME;
-        }
-
-        return $data;
-    }
-
-    protected function applyScheduleData(array $data, User $user, bool $isScheduled, array $holidays, ?array $weeklyPattern): array
-    {
-        $dateStr = $data['date']->format('Y-m-d');
-
-        if (!$isScheduled) {
-            // It's a day off (Weekend or Holiday)
-            $data['status'] = $data['is_holiday']
-                ? ($holidays[$dateStr]['name'] ?? __('Holiday'))
-                : __('Weekend');
-            $data['status_type'] = $data['is_holiday'] ? 'holiday' : 'weekend';
-
-            // Exception: Students/Hourly workers show empty status on off days if not a holiday
-            if ($user->employment_type === EmploymentType::STUDENT && !$data['is_holiday']) {
-                $data['status'] = '-';
-                $data['status_type'] = 'none';
+                $log = new AttendanceLog(['user_id' => $user->id, 'date' => $date, 'status' => $status]);
             }
 
-            return $data;
-        }
+            if ($log->status === AttendanceStatusType::HOLIDAY) {
+                $log->holiday_name = $holidays[$dateString]['name'] ?? __('Holiday');
+            }
 
-        // It is a scheduled workday, but no log exists
-        if ($user->employment_type === EmploymentType::STANDARD) {
-            // Standard employees get auto-filled "Present"
-            $dayName = strtolower($data['date']->format('l'));
-
-            $data['check_in'] = self::DEFAULT_START_TIME;
-            $data['check_out'] = self::DEFAULT_END_TIME;
-            $data['worked_hours'] = $weeklyPattern[$dayName] ?? self::DEFAULT_WORK_HOURS;
-            $data['status'] = __('Present');
-            $data['status_type'] = 'present';
-        } else {
-            // Students/Hourly: Shows as Scheduled (or Absent) but no hours
-            $data['status'] = __('Scheduled');
-            $data['status_type'] = 'scheduled';
-        }
-
-        return $data;
-    }
-
-    protected function getLogsKeyedByDate(int $userId, Carbon $start, Carbon $end): Collection
-    {
-        return AttendanceLog::where('user_id', $userId)
-            ->whereBetween('date', [$start, $end])
-            ->get()
-            ->keyBy(fn ($item) => $item->date->format('Y-m-d'));
-    }
-
-    protected function getApprovedLeaves(int $userId, Carbon $start, Carbon $end): Collection
-    {
-        return $this->leaveRequestRepository
-            ->getForUserInPeriod($userId, $start->format('Y-m-d'), $end->format('Y-m-d'))
-            ->where('status', LeaveStatus::APPROVED->value);
-    }
-
-    protected function findLeaveForDate(Carbon $date, Collection $leaves)
-    {
-        // Since leaves collection is small, iteration is acceptable.
-        // For optimization with large datasets, consider an Interval Tree or separating days in query.
-        return $leaves->first(function ($req) use ($date) {
-            return $date->between($req->start_date, $req->end_date);
+            return $log;
         });
+
+        $summaryStats = [
+            'present' => 0, 'vacation' => 0, 'sick_leave' => 0, 'home_office' => 0, 'total_worked_hours' => 0.0,
+        ];
+
+        foreach ($days as $day) {
+            $summaryStats['total_worked_hours'] += $day->worked_hours ?? 0;
+            match ($day->status) {
+                AttendanceStatusType::PRESENT => $summaryStats['present']++,
+                AttendanceStatusType::VACATION => $summaryStats['vacation']++,
+                AttendanceStatusType::SICK_LEAVE => $summaryStats['sick_leave']++,
+                AttendanceStatusType::HOME_OFFICE => $summaryStats['home_office']++,
+                default => null,
+            };
+        }
+
+        $safeName = Str::slug($user->name, '_');
+        $filename = "{$safeName}_{$year}_" . str_pad($month, 2, '0', STR_PAD_LEFT) . '.pdf';
+
+        return [
+            'days' => $days,
+            'summaryStats' => $summaryStats,
+            'monthName' => $startOfMonth->translatedFormat('F'),
+            'filename' => $filename,
+        ];
+    }
+
+    protected function storePdfRaw(int $year, int $month, string $filename, string $pdfContent, User $user): AttendanceDocument
+    {
+        $periodDate = Carbon::create($year, $month, 1)->toDateString();
+        $document = $this->attendanceDocumentRepository->findExisting($user->id, $periodDate);
+
+        if (!$document) {
+            /** @var AttendanceDocument $document */
+            $document = $this->attendanceDocumentRepository->create([
+                'user_id' => $user->id,
+                'month'   => $periodDate,
+                'status'  => 'generated',
+            ]);
+        }
+
+        $document->addMediaFromStream($pdfContent)
+            ->usingFileName($filename)
+            ->toMediaCollection('signed_sheets');
+
+        return $document;
+    }
+
+    public function generateLogForUser(User $user, Carbon $date): void
+    {
+        if ($this->holidayService->isHoliday($date)) {
+            $this->attendanceLogRepository->updateOrCreateLog(
+                $user->id,
+                $date->toDateString(),
+                AttendanceStatusType::HOLIDAY
+            );
+            return;
+        }
+
+        $workSchedule = $user->workSchedule;
+        if ($workSchedule && $workSchedule->isWorkday($date)) {
+            $leaveRequest = $user->leaveRequests()
+                ->where('status', LeaveStatus::APPROVED)
+                ->where('start_date', '<=', $date)
+                ->where('end_date', '>=', $date)
+                ->first();
+
+            if ($leaveRequest) {
+                $attendanceStatus = match ($leaveRequest->type) {
+                    LeaveType::VACATION => AttendanceStatusType::VACATION,
+                    LeaveType::SICK => AttendanceStatusType::SICK_LEAVE,
+                    LeaveType::HOME_OFFICE => AttendanceStatusType::HOME_OFFICE,
+                    LeaveType::UNPAID => AttendanceStatusType::UNPAID,
+                    default => AttendanceStatusType::OFF,
+                };
+                $this->attendanceLogRepository->updateOrCreateLog($user->id, $date->toDateString(), $attendanceStatus);
+                return;
+            }
+
+            $this->attendanceLogRepository->updateOrCreateLog(
+                $user->id,
+                $date->toDateString(),
+                AttendanceStatusType::PRESENT,
+                $workSchedule->getWorkHoursForDay($date)
+            );
+            return;
+        }
+
+        if ($date->isWeekend()) {
+            $this->attendanceLogRepository->updateOrCreateLog(
+                $user->id,
+                $date->toDateString(),
+                AttendanceStatusType::WEEKEND
+            );
+            return;
+        }
+
+        $this->attendanceLogRepository->updateOrCreateLog(
+            $user->id,
+            $date->toDateString(),
+            AttendanceStatusType::OFF
+        );
     }
 }

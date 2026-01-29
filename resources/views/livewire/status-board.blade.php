@@ -12,8 +12,8 @@
         <!-- Top Row: Date & Navigation -->
         <div class="flex flex-col lg:flex-row justify-between items-center gap-4 border-b border-zinc-100 dark:border-zinc-800 pb-4">
             <div class="flex flex-col sm:flex-row gap-4 w-full lg:w-auto items-center">
-                <flux:input wire:model.live="startDate" type="date" label="{{ __('Start Date') }}" icon="calendar" class="w-full sm:w-40" />
-                <flux:input wire:model.live="endDate" type="date" label="{{ __('End Date') }}" icon="calendar" class="w-full sm:w-40" />
+                <flux:date-picker locale="hu-HU" wire:model="startDate" label="{{ __('Start Date') }}" />
+                <flux:date-picker locale="hu-HU" wire:model="endDate" label="{{ __('End Date') }}" />
             </div>
 
             <div class="flex items-center gap-4 w-full lg:w-auto justify-between lg:justify-end">
@@ -32,8 +32,10 @@
         <!-- Quick Date Filters -->
         <div class="flex flex-wrap gap-2 justify-center lg:justify-start border-b border-zinc-100 dark:border-zinc-800 pb-4">
             <flux:button wire:click="previousWeek" variant="subtle" size="sm">{{ __('Previous Week') }}</flux:button>
+            <flux:button wire:click="nextWeek" variant="subtle" size="sm">{{ __('Next Week') }}</flux:button>
             <flux:button wire:click="thisMonth" variant="subtle" size="sm">{{ __('This Month') }}</flux:button>
             <flux:button wire:click="previousMonth" variant="subtle" size="sm">{{ __('Previous Month') }}</flux:button>
+            <flux:button wire:click="nextMonth" variant="subtle" size="sm">{{ __('Next Month') }}</flux:button>
         </div>
 
         <!-- Bottom Row: Filters & Stats -->
@@ -96,7 +98,7 @@
                             <div class="flex items-center gap-2">
                                 <flux:avatar src="{{ $row['user']->profile_photo_url ?? '' }}" name="{{ $row['user']->name }}" size="xs" />
                                 <div class="flex flex-col">
-                                    <span class="truncate max-w-30">{{ $row['user']->name }}</span>
+                                    <span class="truncate max-w-70">{{ $row['user']->name }}</span>
                                     @if($row['user']->departments->isNotEmpty())
                                         <div class="flex flex-wrap gap-1 mt-1">
                                             @foreach($row['user']->departments as $dept)

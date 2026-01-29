@@ -6,9 +6,13 @@
     <body class="min-h-screen bg-white dark:bg-zinc-800">
         <flux:sidebar sticky collapsible="mobile" class="w-72 border-e border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900">
             <flux:sidebar.header>
-                <x-app-logo :sidebar="true" href="{{ route('dashboard') }}" wire:navigate />
+                <a href="{{ route('dashboard') }}" wire:navigate class="data-current:font-bold">
+                    <x-app-logo-icon />
+                </a>
                 <flux:sidebar.collapse class="lg:hidden" />
             </flux:sidebar.header>
+
+            <flux:separator class="my-2" />
 
             <flux:sidebar.nav>
                 <!-- General -->
@@ -33,6 +37,10 @@
                         {{ __('Company Directory') }}
                     </x-flux::sidebar.item>
 
+                    <flux:sidebar.item icon="user-group" :href="route('organization.index')" :current="request()->routeIs('organization.index')" wire:navigate>
+                        {{ __('Organization Chart') }}
+                    </flux:sidebar.item>
+
                     @can('view status board')
                         <flux:sidebar.item icon="table-cells" :href="route('status-board')" :current="request()->routeIs('status-board')" wire:navigate>
                             {{ __('Status Board') }}
@@ -40,15 +48,14 @@
                     @endcan
                 </flux:sidebar.group>
 
+                <flux:separator class="my-2" />
+
                 <!-- Management -->
                 @if(auth()->user()->can('view users') || auth()->user()->can('approve leave requests') || auth()->user()->can('adjust leave balances') || auth()->user()->can('view payroll data') || auth()->user()->can('manage work schedules') || auth()->user()->can('manage departments'))
                     <flux:sidebar.group :heading="__('Management')" class="grid">
                         @can('view users')
                             <flux:sidebar.item icon="users" :href="route('employees.index')" :current="request()->routeIs('employees.index')" wire:navigate>
                                 {{ __('Employees') }}
-                            </flux:sidebar.item>
-                            <flux:sidebar.item icon="user-group" :href="route('organization.index')" :current="request()->routeIs('organization.index')" wire:navigate>
-                                {{ __('Organization Chart') }}
                             </flux:sidebar.item>
                         @endcan
 
@@ -84,6 +91,8 @@
                     </flux:sidebar.group>
                 @endif
 
+                <flux:separator class="my-2" />
+
                 <!-- Settings -->
                 @can('manage settings')
                     <flux:sidebar.group :heading="__('Settings')" class="grid">
@@ -93,8 +102,8 @@
                         <flux:sidebar.item icon="calendar-days" :href="route('settings.special-days')" :current="request()->routeIs('settings.special-days')" wire:navigate>
                             {{ __('Special Days') }}
                         </flux:sidebar.item>
-                        <flux:sidebar.item icon="cog-6-tooth" :href="route('settings.index')" :current="request()->routeIs('settings.index')" wire:navigate>
-                            {{ __('System Settings') }}
+                        <flux:sidebar.item icon="home-modern" :href="route('settings.home-office-policies')" :current="request()->routeIs('settings.home-office-policies')" wire:navigate>
+                            {{ __('Home Office Policies') }}
                         </flux:sidebar.item>
                         @can('view audit logs')
                             <flux:sidebar.item icon="clipboard-document-list" :href="route('settings.audit-logs')" :current="request()->routeIs('settings.audit-logs')" wire:navigate>
@@ -104,11 +113,22 @@
                     </flux:sidebar.group>
                 @endcan
             </flux:sidebar.nav>
-
-            <flux:spacer />
-
-            @livewire('user-avatar')
         </flux:sidebar>
+
+        <flux:header class="block! bg-white lg:bg-zinc-50 dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-700">
+            <flux:navbar class="w-full justify-end">
+                @persist('notification-bell')
+                    <livewire:notification-center />
+                @endpersist
+                <flux:separator vertical class="my-2" />
+                <flux:radio.group x-data variant="segmented" x-model="$flux.appearance">
+                    <flux:radio value="light" icon="sun"></flux:radio>
+                    <flux:radio value="dark" icon="moon"></flux:radio>
+                </flux:radio.group>
+                <flux:separator vertical class="my-2" />
+                @livewire('user-avatar')
+            </flux:navbar>
+        </flux:header>
 
         <!-- Mobile Header -->
         <flux:header class="lg:hidden">
@@ -123,5 +143,6 @@
 
         @fluxScripts
         @vite('resources/js/app.js')
+        @stack('scripts')
     </body>
 </html>
