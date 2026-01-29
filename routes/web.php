@@ -52,6 +52,9 @@ Route::middleware(['auth'])->group(function () {
     // Impersonate
     Route::get('/impersonate/stop', [ImpersonateController::class, 'stopImpersonating'])->name('impersonate.stop');
     Route::get('/impersonate/{user}', [ImpersonateController::class, 'impersonate'])->name('impersonate');
+
+    Route::get('connect/microsoft', [App\Http\Controllers\MicrosoftAuthController::class, 'connect'])->name('msgraph.connect');
+    Route::get('connect/microsoft/callback', [App\Http\Controllers\MicrosoftAuthController::class, 'callback'])->name('msgraph.callback');
 });
 
 require __DIR__.'/settings.php';

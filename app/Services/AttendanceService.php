@@ -13,6 +13,9 @@ use App\Repositories\Contracts\AttendanceLogRepositoryInterface;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Carbon\CarbonPeriod;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class AttendanceService
@@ -190,5 +193,41 @@ class AttendanceService
             $date->toDateString(),
             AttendanceStatusType::OFF
         );
+    }
+
+    protected function uploadToSharePoint(int $year, string $filename, string $content): void
+    {
+        try {
+            // Megkeressük az első olyan felhasználót (Admint), akinek van élő Microsoft kapcsolata.
+            $adminWithToken = User::whereHas('msGraphToken')->first();
+
+            if ($adminWithToken) {
+                // Elmentjük, ki van épp bejelentkezve (ha van)
+                $previousUser = Auth::user();
+
+                // Bejelentkeztetjük az Admint a kód futásának idejére.
+                // A 'msgraph' driver az Auth::user()-t használja a token megtalálásához.
+                Auth::login($adminWithToken);
+
+                // A mentés
+                $path = "Attendance/{$year}/{$filename}";
+                Storage::disk('msgraph')->put($path, $content);
+
+                Log::info("PDF feltöltve SharePointra: {$path}");
+
+                // Visszaállítjuk az eredeti állapotot
+                if ($previousUser) {
+                    Auth::login($previousUser);
+                } else {
+                    Auth::logout();
+                }
+            } else {
+                Log::warning("SharePoint feltöltés kihagyva: Nincs Microsofttal összekötött Admin felhasználó.");
+            }
+
+        } catch (\Exception $e) {
+            // Ha hiba van, csak logoljuk, a fő folyamat nem áll meg.
+            Log::error('SharePoint feltöltési hiba: ' . $e->getMessage());
+        }
     }
 }

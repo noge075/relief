@@ -60,6 +60,11 @@ return [
             'report' => false,
         ],
 
+        'msgraph' => [
+            'driver' => 'msgraph',
+            'driveId' => env('MSGRAPH_DRIVEID', ''),
+        ],
+
     ],
 
     /*
