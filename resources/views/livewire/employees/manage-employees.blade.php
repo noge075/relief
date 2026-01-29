@@ -175,7 +175,6 @@
                                         'super-admin' => 'red',
                                         'hr' => 'pink',
                                         'manager' => 'blue',
-                                        'employee' => 'zinc',
                                         'payroll' => 'cyan',
                                         default => 'zinc'
                                     };

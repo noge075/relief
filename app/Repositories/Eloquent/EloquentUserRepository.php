@@ -17,7 +17,7 @@ class EloquentUserRepository extends BaseRepository implements UserRepositoryInt
 
     public function getSubordinates(int $managerId): Collection
     {
-        return User::where('manager_id', $managerId)->get();
+        return $this->model::where('manager_id', $managerId)->get();
     }
 
     public function getSubordinatesPaginated(int $managerId, int $perPage = 10, array $filters = [], string $sortCol = 'name', bool $sortAsc = true): LengthAwarePaginator

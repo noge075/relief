@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\SpecialDayType;
 use App\Models\SpecialDay;
 use App\Repositories\Contracts\SpecialDayRepositoryInterface;
 use Carbon\Carbon;
@@ -19,38 +20,26 @@ class HolidayService
         protected SpecialDayRepositoryInterface $specialDayRepository
     ) {}
 
-    /**
-     * Checks if a date is a designated holiday, ignoring weekends.
-     */
     public function isHoliday(CarbonInterface $date): bool
     {
         $dateStr = $date->format('Y-m-d');
         $specialDay = $this->specialDayRepository->findByDate($dateStr);
 
-        // An explicitly defined workday (like a Saturday) is NOT a holiday.
-        if ($specialDay && $specialDay->type === 'workday') {
+        if ($specialDay && $specialDay->type === SpecialDayType::WORKDAY) {
             return false;
         }
 
-        // An explicitly defined holiday IS a holiday.
-        if ($specialDay && $specialDay->type === 'holiday') {
+        if ($specialDay && $specialDay->type === SpecialDayType::HOLIDAY) {
             return true;
         }
-        
-        // If it's a weekend and no special rule applies, it's not a designated holiday.
+
         if ($date->isWeekend()) {
-            // Check if Spatie considers it a holiday anyway (e.g., Christmas on a Sunday)
-            // but only if there isn't a rule making it a workday.
             return $this->isOfficialHoliday($date);
         }
 
-        // If no special day is defined, check the official calendar for the weekday.
         return $this->isOfficialHoliday($date);
     }
 
-    /**
-     * Visszaadja az összes ünnepnapot egy időszakra (DB + Hivatalos - Kivételek).
-     */
     public function getHolidaysInRange(CarbonInterface $start, CarbonInterface $end): array
     {
         $officialHolidays = collect();
@@ -64,7 +53,7 @@ class HolidayService
                 $h['date']->format('Y-m-d') => [
                     'date' => $h['date'],
                     'name' => $h['name'],
-                    'type' => 'holiday'
+                    'type' => SpecialDayType::HOLIDAY
                 ]
             ]);
 
@@ -73,13 +62,13 @@ class HolidayService
         foreach ($specialDays as $day) {
             $dateStr = $day->date->format('Y-m-d');
 
-            if ($day->type === 'holiday') {
+            if ($day->type === SpecialDayType::HOLIDAY) {
                 $holidays[$dateStr] = [
                     'date' => $day->date,
                     'name' => $day->description ?? __('Special Holiday'),
-                    'type' => 'holiday'
+                    'type' => SpecialDayType::HOLIDAY
                 ];
-            } elseif ($day->type === 'workday') {
+            } elseif ($day->type === SpecialDayType::WORKDAY) {
                 $holidays->forget($dateStr);
             }
         }
@@ -87,42 +76,36 @@ class HolidayService
         return $holidays->all();
     }
 
-    /**
-     * Visszaadja az áthelyezett munkanapokat (pl. szombatok).
-     */
     public function getExtraWorkdaysInRange(CarbonInterface $start, CarbonInterface $end): array
     {
         $specialDays = $this->specialDayRepository->getInRange($start->format('Y-m-d'), $end->format('Y-m-d'));
 
         return $specialDays
-            ->where('type', 'workday')
+            ->where('type', SpecialDayType::WORKDAY)
             ->mapWithKeys(fn ($day) => [
                 $day->date->format('Y-m-d') => [
                     'date' => $day->date,
                     'name' => $day->description ?? __('Extra Workday'),
-                    'type' => 'workday'
+                    'type' => SpecialDayType::WORKDAY
                 ]
             ])
             ->all();
     }
 
-    /**
-     * Adminisztrációs nézethez adatok.
-     */
     public function getRawSpecialDays(int $year, ?string $search = null, string $sortCol = 'date', bool $sortAsc = true): array
     {
         $spatieDays = $this->getSpatieHolidays($year)->map(fn ($h) => [
             'id' => null,
             'date' => $h['date']->format('Y-m-d'),
             'name' => $h['name'],
-            'type' => 'holiday',
+            'type' => SpecialDayType::HOLIDAY,
             'source' => 'auto',
         ]);
 
         $dbDays = $this->specialDayRepository->getByYear($year)->map(fn ($day) => [
             'id' => $day->id,
             'date' => $day->date->format('Y-m-d'),
-            'name' => $day->description ?? ($day->type === 'holiday' ? __('Special Holiday') : __('Extra Workday')),
+            'name' => $day->description ?? ($day->type === SpecialDayType::HOLIDAY ? __('Special Holiday') : __('Extra Workday')),
             'type' => $day->type,
             'source' => 'manual',
         ]);
@@ -139,11 +122,6 @@ class HolidayService
             ->all();
     }
 
-
-    /**
-     * Cache-elt lekérdezés a Spatie Holidays csomagból.
-     * Ez gyorsítja a folyamatot, ha sokszor hívjuk meg ugyanazt az évet.
-     */
     protected function getSpatieHolidays(int $year): Collection
     {
         return Cache::remember("holidays_hu_{$year}", self::CACHE_TTL, function () use ($year) {
@@ -190,15 +168,10 @@ class HolidayService
         Cache::forget("holidays_hu_{$year}");
     }
 
-    public function getSpecialDaysByYear(int $year)
-    {
-        return $this->specialDayRepository->getByYear($year);
-    }
-
     public function findSpecialDay(int $id): ?SpecialDay
     {
         /**
-         * @var SpecialDay $day
+         * @var SpecialDay|null
          */
         return $this->specialDayRepository->find($id);
     }

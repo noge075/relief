@@ -18,7 +18,7 @@ class EloquentLeaveRequestRepository extends BaseRepository implements LeaveRequ
 
     public function getForUser(int $userId, ?string $status = null): Collection
     {
-        $query = LeaveRequest::where('user_id', $userId);
+        $query = $this->model::where('user_id', $userId);
 
         if ($status) {
             $query->where('status', $status);
@@ -29,7 +29,7 @@ class EloquentLeaveRequestRepository extends BaseRepository implements LeaveRequ
 
     public function getForUserInPeriod(int $userId, string $start, string $end): Collection
     {
-        return LeaveRequest::where('user_id', $userId)
+        return $this->model::where('user_id', $userId)
             ->where(function ($query) use ($start, $end) {
                 $query->where('start_date', '<=', $end)
                     ->where('end_date', '>=', $start);
@@ -40,7 +40,7 @@ class EloquentLeaveRequestRepository extends BaseRepository implements LeaveRequ
 
     public function getPendingForManager(int $managerId): Collection
     {
-        return LeaveRequest::whereHas('user', function ($query) use ($managerId) {
+        return $this->model::whereHas('user', function ($query) use ($managerId) {
             $query->where('manager_id', $managerId);
         })
             ->where('status', LeaveStatus::PENDING->value)
@@ -55,7 +55,7 @@ class EloquentLeaveRequestRepository extends BaseRepository implements LeaveRequ
         string $sortCol = 'start_date',
         bool $sortAsc = true
     ): LengthAwarePaginator {
-        $query = LeaveRequest::with('user')
+        $query = $this->model::with('user')
             ->where('status', LeaveStatus::PENDING->value);
 
         if ($managerId) {
@@ -92,7 +92,7 @@ class EloquentLeaveRequestRepository extends BaseRepository implements LeaveRequ
 
     public function findOverlapping(int $userId, string $start, string $end, ?int $excludeId = null): Collection
     {
-        return LeaveRequest::where('user_id', $userId)
+        return $this->model::where('user_id', $userId)
             ->where(function ($query) {
                 $query->where('status', LeaveStatus::APPROVED->value)
                     ->orWhere('status', LeaveStatus::PENDING->value);

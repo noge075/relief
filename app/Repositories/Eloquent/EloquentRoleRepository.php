@@ -28,7 +28,8 @@ class EloquentRoleRepository extends BaseRepository implements RoleRepositoryInt
 
     public function getPaginated(int $perPage = 10, ?string $search = null, string $sortCol = 'name', bool $sortAsc = true): LengthAwarePaginator
     {
-        $query = $this->model->with('permissions');
+        $query = $this->model->with('permissions')
+            ->withCount('permissions');
 
         if ($search) {
             $query->where('name', 'like', "%{$search}%");

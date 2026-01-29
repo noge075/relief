@@ -22,7 +22,6 @@ class StatusBoardService
 
     public function getStatusMatrix(User $actor, Carbon $start, Carbon $end, array $filters = []): array
     {
-        // 1. Dolgozók lekérése (WorkSchedule betöltésével)
         $users = User::with('workSchedule', 'departments')
             ->where('is_active', true)
             ->when($filters['department_id'] ?? null, function ($q, $id) {
@@ -43,11 +42,9 @@ class StatusBoardService
             ->orderBy('first_name')
             ->get();
 
-        // 2. Ünnepnapok és munkanapok
         $holidays = $this->holidayService->getHolidaysInRange($start, $end);
         $extraWorkdays = $this->holidayService->getExtraWorkdaysInRange($start, $end);
 
-        // 3. Szabadságok lekérése (APPROVED és PENDING)
         $leaveRequests = LeaveRequest::whereIn('user_id', $users->pluck('id'))
             ->whereIn('status', [LeaveStatus::APPROVED->value, LeaveStatus::PENDING->value])
             ->where(function ($query) use ($start, $end) {
@@ -57,7 +54,6 @@ class StatusBoardService
             ->get()
             ->groupBy('user_id');
 
-        // 4. Mátrix összeállítása
         $matrix = [];
         $period = CarbonPeriod::create($start, $end);
 
@@ -79,7 +75,6 @@ class StatusBoardService
                 $meta = null;
                 $isPending = false;
 
-                // A. Munkarend és Ünnepnap ellenőrzés
                 $isWeekend = $date->isWeekend();
                 $isHoliday = isset($holidays[$dateStr]);
                 $isExtraWorkday = isset($extraWorkdays[$dateStr]);
@@ -87,26 +82,22 @@ class StatusBoardService
                 $isScheduledWorkday = false;
 
                 if ($weeklyPattern) {
-                    // Ha van munkarend, az dönt
-                    $dayName = strtolower($date->format('l')); // monday, tuesday...
+                    $dayName = strtolower($date->format('l'));
                     if (isset($weeklyPattern[$dayName]) && $weeklyPattern[$dayName] > 0) {
                         $isScheduledWorkday = true;
                     }
                 } else {
-                    // Ha nincs, akkor H-P munkanap
                     $isScheduledWorkday = !$isWeekend;
                 }
 
-                // Ünnepnap felülírja a munkarendet (kivéve extra munkanap)
                 if ($isHoliday && !$isExtraWorkday) {
                     $isScheduledWorkday = false;
                 }
-                // Extra munkanap mindig munkanap
+
                 if ($isExtraWorkday) {
                     $isScheduledWorkday = true;
                 }
 
-                // Státusz beállítása
                 if (!$isScheduledWorkday) {
                     $status = 'off';
                     if ($isHoliday) {
@@ -114,14 +105,12 @@ class StatusBoardService
                     } elseif ($isWeekend) {
                         $meta = __('Weekend');
                     } else {
-                        // Munkarend szerint szabadnap (pl. Diák Hétfőn)
                         $meta = __('Off');
                     }
                 } elseif ($isExtraWorkday) {
                     $meta = $extraWorkdays[$dateStr]['name'] ?? __('Extra Workday');
                 }
 
-                // B. Szabadság felülírása
                 if (isset($leaveRequests[$user->id])) {
                     foreach ($leaveRequests[$user->id] as $request) {
                         if ($date->between($request->start_date, $request->end_date)) {

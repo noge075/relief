@@ -588,5 +588,9 @@
     "Attendance logs are editable until the month is closed.": "A jelenléti adatok szerkeszthetőek, amíg a hónap nincs lezárva.",
     "I accept the": "Elfogadom az",
     "privacy policy": "adatvédelmi szabályzatot",
-    "Privacy Policy": "Adatvédelmi szabályzat"
+    "Privacy Policy": "Adatvédelmi szabályzat",
+    "Performed by": "Végrehajtotta",
+    "Affected User": "Érintett felhasználó",
+    "Subject Description": "Művelet tárgya",
+    "Select a date": "Válassz egy dátumot"
 }

@@ -99,10 +99,48 @@
                 <div>
                     <flux:heading size="lg">{{ __('Activity Details') }}</flux:heading>
                     <flux:subheading>
-                        {{ __('Event') }}: {{ __(ucfirst($selectedActivity->event)) }} |
-                        {{ __('Subject') }}: {{ $this->getSubjectDescription($selectedActivity) }} |
-                        {{ __('User') }}: {{ $this->getCauserName($selectedActivity) }} |
-                        {{ __('Date') }}: {{ $selectedActivity->created_at->format('Y.m.d H:i') }}
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-y-4 gap-x-6">
+                            {{-- 1. Sor: Esemény és Dátum --}}
+                            <div>
+                                <flux:label class="mb-1">{{ __('Event') }}</flux:label>
+                                <div class="font-medium text-zinc-900 dark:text-white flex items-center gap-2">
+                                    {{-- Opcionális: tehetsz ide egy ikont is az event típusa alapján --}}
+                                    <flux:badge size="sm" color="zinc">{{ __(ucfirst($selectedActivity->event)) }}</flux:badge>
+                                </div>
+                            </div>
+
+                            <div>
+                                <flux:label class="mb-1">{{ __('Date') }}</flux:label>
+                                <div class="font-medium text-zinc-900 dark:text-white">
+                                    {{ $selectedActivity->created_at->format('Y.m.d H:i') }}
+                                </div>
+                            </div>
+
+                            <flux:separator class="col-span-1 sm:col-span-2 my-2" />
+
+                            {{-- 2. Sor: Aki csinálta (Actor) és Az érintett (Target) --}}
+                            <div>
+                                <flux:label class="mb-1">{{ __('Performed by') }}</flux:label> {{-- "User" helyett pontosabb --}}
+                                <div class="font-medium text-zinc-900 dark:text-white">
+                                    {{ $this->getCauserName($selectedActivity) }}
+                                </div>
+                            </div>
+
+                            <div>
+                                <flux:label class="mb-1">{{ __('Affected User') }}</flux:label> {{-- "User" helyett pontosabb --}}
+                                <div class="font-medium text-zinc-900 dark:text-white">
+                                    {{ $this->getSubjectUserName($selectedActivity) ?: '-' }}
+                                </div>
+                            </div>
+
+                            {{-- 3. Sor: Tárgy leírása (pl. melyik rekord) --}}
+                            <div class="col-span-1 sm:col-span-2">
+                                <flux:label class="mb-1">{{ __('Subject Description') }}</flux:label>
+                                <div class="font-medium text-zinc-900 dark:text-white">
+                                    {{ $this->getSubjectDescription($selectedActivity) }}
+                                </div>
+                            </div>
+                        </div>
                     </flux:subheading>
                 </div>
 

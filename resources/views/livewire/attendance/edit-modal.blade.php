@@ -13,8 +13,8 @@
                 </div>
             @endif
 
-            <flux:input wire:model="editingCheckIn" type="time" label="{{ __('Check In') }}" />
-            <flux:input wire:model="editingCheckOut" type="time" label="{{ __('Check Out') }}" />
+            <flux:time-picker interval="15" wire:model="editingCheckIn" type="time" label="{{ __('Check In') }}" />
+            <flux:time-picker interval="15" wire:model="editingCheckOut" type="time" label="{{ __('Check Out') }}" />
         </div>
 
         <div class="flex justify-end gap-2">

@@ -23,33 +23,70 @@
     --color-zinc-900: #171717;
     --color-zinc-950: #0a0a0a;
 
-    --color-indigo-50: #eef2ff;
-    --color-indigo-100: #e0e7ff;
-    --color-indigo-200: #c7d2fe;
-    --color-indigo-300: #a5b4fc;
-    --color-indigo-400: #818cf8;
-    --color-indigo-500: #6366f1;
-    --color-indigo-600: #132347;
-    --color-indigo-700: #4338ca;
-    --color-indigo-800: #3730a3;
-    --color-indigo-900: #312e81;
-    --color-indigo-950: #1e1b4b;
+    --color-brand-blue: #00288C;
+    --color-brand-gold: #DCB464;
+    --color-brand-cyan: #00DCDC;
+    --color-brand-orange: #FFB400;
+    --color-brand-lime: #50DC00;
+    --color-brand-sky: #00C8FF;
+    --color-brand-red: #E62020;
 
-    --color-accent: #132347;
+    --color-accent: var(--color-brand-blue);
     --color-accent-content: #ffffff;
     --color-accent-foreground: #ffffff;
+
+    --color-blue-50: #00288C26; --color-indigo-50: #00288C26; --color-violet-50: #00288C26; --color-purple-50: #00288C26;
+    --color-blue-100: #00288C33; --color-indigo-100: #00288C33; --color-violet-100: #00288C33; --color-purple-100: #00288C33;
+    --color-blue-400: #00288C; --color-indigo-400: #00288C; --color-violet-400: #00288C; --color-purple-400: #00288C;
+    --color-blue-500: #00288C; --color-indigo-500: #00288C; --color-violet-500: #00288C; --color-purple-500: #00288C;
+    --color-blue-600: #00288C; --color-indigo-600: #00288C; --color-violet-600: #00288C; --color-purple-600: #00288C;
+
+    --color-sky-50: #00C8FF26;
+    --color-sky-100: #00C8FF33;
+    --color-sky-400: #00C8FF;
+    --color-sky-500: #00C8FF;
+    --color-sky-600: #0096bf;
+
+    --color-cyan-50: #00DCDC26; --color-teal-50: #00DCDC26;
+    --color-cyan-100: #00DCDC33; --color-teal-100: #00DCDC33;
+    --color-cyan-400: #00DCDC; --color-teal-400: #00DCDC;
+    --color-cyan-500: #00DCDC; --color-teal-500: #00DCDC;
+    --color-cyan-600: #008f8f; --color-teal-600: #008f8f;
+
+    --color-green-50: #50DC0026; --color-lime-50: #50DC0026; --color-emerald-50: #50DC0026;
+    --color-green-100: #50DC0033; --color-lime-100: #50DC0033; --color-emerald-100: #50DC0033;
+    --color-green-400: #50DC00; --color-lime-400: #50DC00; --color-emerald-400: #50DC00;
+    --color-green-500: #50DC00; --color-lime-500: #50DC00; --color-emerald-500: #50DC00;
+    --color-green-600: #3da800; --color-lime-600: #3da800; --color-emerald-600: #3da800;
+
+    --color-yellow-50: #DCB46426; --color-amber-50: #DCB46426;
+    --color-yellow-100: #DCB46433; --color-amber-100: #DCB46433;
+    --color-yellow-400: #DCB464; --color-amber-400: #DCB464;
+    --color-yellow-500: #DCB464; --color-amber-500: #DCB464;
+    --color-yellow-600: #b09050; --color-amber-600: #b09050;
+
+    --color-orange-50: #FFB40026; --color-pink-50: #FFB40026; --color-fuchsia-50: #FFB40026;
+    --color-orange-100: #FFB40033; --color-pink-100: #FFB40033; --color-fuchsia-100: #FFB40033;
+    --color-orange-400: #FFB400; --color-pink-400: #FFB400; --color-fuchsia-400: #FFB400;
+    --color-orange-500: #FFB400; --color-pink-500: #FFB400; --color-fuchsia-500: #FFB400;
+    --color-orange-600: #cc9000; --color-pink-600: #cc9000; --color-fuchsia-600: #cc9000;
+
+    --color-red-50: #E6202026; --color-rose-50: #E6202026;
+    --color-red-100: #E6202033; --color-rose-100: #E6202033;
+    --color-red-400: #E62020; --color-rose-400: #E62020;
+    --color-red-500: #E62020; --color-rose-500: #E62020;
+    --color-red-600: #b31919; --color-rose-600: #b31919;
 }
 
 @layer theme {
     .dark {
-        --color-accent: #132347;
+        --color-accent: var(--color-brand-blue);
         --color-accent-content: #ffffff;
         --color-accent-foreground: #ffffff;
     }
 }
 
 @layer base {
-
     *,
     ::after,
     ::before,
@@ -107,4 +144,6 @@ select:focus[data-flux-control] {
     margin-left: 1.5em;
 }
 
-.trix-content
+.trix-content {
+
+}

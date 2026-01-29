@@ -136,7 +136,6 @@ class LeaveRequestService
                 );
             }
 
-            // Generate attendance logs for the leave period
             $period = CarbonPeriod::create($request->start_date, $request->end_date);
             foreach ($period as $date) {
                 $this->attendanceService->generateLogForUser($request->user, $date);

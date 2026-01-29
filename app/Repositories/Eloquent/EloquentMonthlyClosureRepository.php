@@ -15,10 +15,9 @@ class EloquentMonthlyClosureRepository extends BaseRepository implements Monthly
 
     public function isMonthClosed(string $date): bool
     {
-        // Átalakítjuk a hónap első napjára, mert úgy tároljuk
         $startOfMonth = Carbon::parse($date)->startOfMonth()->format('Y-m-d');
 
-        return MonthlyClosure::where('month', $startOfMonth)
+        return $this->model::where('month', $startOfMonth)
             ->where('is_closed', true)
             ->exists();
     }
@@ -27,7 +26,7 @@ class EloquentMonthlyClosureRepository extends BaseRepository implements Monthly
     {
         $startOfMonth = Carbon::parse($yearMonth)->startOfMonth()->format('Y-m-d');
 
-        return MonthlyClosure::updateOrCreate(
+        return $this->model::updateOrCreate(
             ['month' => $startOfMonth],
             [
                 'is_closed' => true,
@@ -40,8 +39,7 @@ class EloquentMonthlyClosureRepository extends BaseRepository implements Monthly
     public function reopenMonth(string $yearMonth): bool
     {
         $startOfMonth = Carbon::parse($yearMonth)->startOfMonth()->format('Y-m-d');
-
-        $closure = MonthlyClosure::where('month', $startOfMonth)->first();
+        $closure = $this->model::where('month', $startOfMonth)->first();
 
         if ($closure) {
             return $closure->update(['is_closed' => false]);

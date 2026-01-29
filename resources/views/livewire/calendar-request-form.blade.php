@@ -13,8 +13,8 @@
 
         <div class="grid gap-4">
             <div class="grid grid-cols-2 gap-4">
-                <flux:input wire:model="selectedDate" type="date" label="{{ __('Start Date') }}" />
-                <flux:input wire:model="endDate" type="date" label="{{ __('End Date') }}" />
+                <flux:date-picker locale="hu-HU" wire:model="selectedDate" label="{{ __('Start Date') }}" />
+                <flux:date-picker locale="hu-HU" wire:model="endDate" label="{{ __('End Date') }}" />
             </div>
 
             <flux:radio.group wire:model="requestType" label="{{ __('Type') }}">

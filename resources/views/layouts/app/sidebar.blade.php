@@ -6,9 +6,13 @@
     <body class="min-h-screen bg-white dark:bg-zinc-800">
         <flux:sidebar sticky collapsible="mobile" class="w-72 border-e border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900">
             <flux:sidebar.header>
-                <x-app-logo :sidebar="true" href="{{ route('dashboard') }}" wire:navigate />
+                <a href="{{ route('dashboard') }}" wire:navigate class="data-current:font-bold">
+                    <x-app-logo-icon />
+                </a>
                 <flux:sidebar.collapse class="lg:hidden" />
             </flux:sidebar.header>
+
+            <flux:separator class="my-2" />
 
             <flux:sidebar.nav>
                 <!-- General -->
@@ -43,6 +47,8 @@
                         </flux:sidebar.item>
                     @endcan
                 </flux:sidebar.group>
+
+                <flux:separator class="my-2" />
 
                 <!-- Management -->
                 @if(auth()->user()->can('view users') || auth()->user()->can('approve leave requests') || auth()->user()->can('adjust leave balances') || auth()->user()->can('view payroll data') || auth()->user()->can('manage work schedules') || auth()->user()->can('manage departments'))
@@ -85,6 +91,8 @@
                     </flux:sidebar.group>
                 @endif
 
+                <flux:separator class="my-2" />
+
                 <!-- Settings -->
                 @can('manage settings')
                     <flux:sidebar.group :heading="__('Settings')" class="grid">
@@ -105,11 +113,22 @@
                     </flux:sidebar.group>
                 @endcan
             </flux:sidebar.nav>
-
-            <flux:spacer />
-
-            @livewire('user-avatar')
         </flux:sidebar>
+
+        <flux:header class="block! bg-white lg:bg-zinc-50 dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-700">
+            <flux:navbar class="w-full justify-end">
+                @persist('notification-bell')
+                    <livewire:notification-center />
+                @endpersist
+                <flux:separator vertical class="my-2" />
+                <flux:radio.group x-data variant="segmented" x-model="$flux.appearance">
+                    <flux:radio value="light" icon="sun"></flux:radio>
+                    <flux:radio value="dark" icon="moon"></flux:radio>
+                </flux:radio.group>
+                <flux:separator vertical class="my-2" />
+                @livewire('user-avatar')
+            </flux:navbar>
+        </flux:header>
 
         <!-- Mobile Header -->
         <flux:header class="lg:hidden">

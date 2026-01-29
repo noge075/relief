@@ -1,8 +1,12 @@
 <div class="relative" x-data="{ open: false }" wire:poll.5s="loadNotifications">
-    <button @click="open = !open" class="relative w-10 h-10 flex items-center justify-center bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-700 dark:hover:bg-zinc-600 rounded-full transition-colors">
-        <flux:icon name="bell" class="w-6 h-6 text-zinc-500 dark:text-zinc-300" />
+    <button
+            @click="open = !open"
+            class="relative w-9 h-9 flex items-center justify-center bg-zinc-200 hover:bg-zinc-200 dark:bg-zinc-700 dark:hover:bg-zinc-600 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-zinc-400 dark:focus:ring-zinc-500"
+    >
+        <flux:icon name="bell" class="w-5 h-5 text-zinc-500 dark:text-zinc-300" />
+
         @if($unreadNotifications->count() > 0)
-            <span class="absolute -top-1 -right-1 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-red-100 bg-red-600 rounded-full">
+            <span class="absolute -top-1 -right-1 inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1.5 text-xs font-bold leading-none text-red-100 bg-red-600 rounded-full border-2 border-white dark:border-zinc-800">
                 {{ $unreadNotifications->count() }}
             </span>
         @endif

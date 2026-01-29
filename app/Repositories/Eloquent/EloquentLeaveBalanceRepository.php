@@ -15,7 +15,7 @@ class EloquentLeaveBalanceRepository extends BaseRepository implements LeaveBala
 
     public function getBalance(int $userId, int $year, string $type): ?LeaveBalance
     {
-        return LeaveBalance::where('user_id', $userId)
+        return $this->model::where('user_id', $userId)
             ->where('year', $year)
             ->where('type', $type)
             ->first();
@@ -23,7 +23,7 @@ class EloquentLeaveBalanceRepository extends BaseRepository implements LeaveBala
 
     public function hasBalance(int $userId, int $year, string $type): bool
     {
-        return LeaveBalance::where('user_id', $userId)
+        return $this->model::where('user_id', $userId)
             ->where('year', $year)
             ->where('type', $type)
             ->exists();
@@ -31,7 +31,7 @@ class EloquentLeaveBalanceRepository extends BaseRepository implements LeaveBala
 
     public function incrementUsed(int $userId, int $year, string $type, float $days): void
     {
-        LeaveBalance::where('user_id', $userId)
+        $this->model::where('user_id', $userId)
             ->where('year', $year)
             ->where('type', $type)
             ->increment('used', $days);
@@ -39,7 +39,7 @@ class EloquentLeaveBalanceRepository extends BaseRepository implements LeaveBala
 
     public function decrementUsed(int $userId, int $year, string $type, float $days): void
     {
-        LeaveBalance::where('user_id', $userId)
+        $this->model::where('user_id', $userId)
             ->where('year', $year)
             ->where('type', $type)
             ->decrement('used', $days);
@@ -47,7 +47,7 @@ class EloquentLeaveBalanceRepository extends BaseRepository implements LeaveBala
 
     public function getPaginated(int $year, array $filters = [], int $perPage = 10, string $sortCol = 'name', bool $sortAsc = true): LengthAwarePaginator
     {
-        $query = LeaveBalance::with('user.departments')
+        $query = $this->model::with('user.departments')
             ->where('year', $year);
 
         if (!empty($filters['search'])) {
@@ -80,7 +80,7 @@ class EloquentLeaveBalanceRepository extends BaseRepository implements LeaveBala
 
     public function getPaginatedForManager(int $managerId, int $year, array $filters = [], int $perPage = 10, string $sortCol = 'name', bool $sortAsc = true): LengthAwarePaginator
     {
-        $query = LeaveBalance::with('user.departments')
+        $query = $this->model::with('user.departments')
             ->where('year', $year)
             ->whereHas('user', function ($q) use ($managerId) {
                 $q->where('manager_id', $managerId);
