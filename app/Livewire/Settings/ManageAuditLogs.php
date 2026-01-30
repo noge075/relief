@@ -8,7 +8,9 @@ use Livewire\Component;
 use Livewire\WithPagination;
 use Spatie\Activitylog\Models\Activity;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Livewire\Attributes\Lazy;
 
+#[Lazy]
 class ManageAuditLogs extends Component
 {
     use AuthorizesRequests;
@@ -37,6 +39,11 @@ class ManageAuditLogs extends Component
         $this->authorize(PermissionType::VIEW_AUDIT_LOGS->value);
 
         $this->perPage = request()->query('per_page', 10);
+    }
+
+    public function placeholder()
+    {
+        return view('livewire.placeholders.manage-audit-logs');
     }
 
     public function updatedSearch()

@@ -11,7 +11,9 @@ use Illuminate\Support\Facades\Mail;
 use App\Mail\BulkEmail;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use App\Repositories\Contracts\UserRepositoryInterface;
+use Livewire\Attributes\Lazy;
 
+#[Lazy]
 class CompanyDirectory extends Component
 {
     use WithPagination;
@@ -35,6 +37,11 @@ class CompanyDirectory extends Component
     public function boot(UserRepositoryInterface $userRepository)
     {
         $this->userRepository = $userRepository;
+    }
+
+    public function placeholder()
+    {
+        return view('livewire.placeholders.company-directory');
     }
 
     public function updatedSearch()

@@ -11,9 +11,11 @@ use Illuminate\Pagination\Paginator;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 use Livewire\WithPagination;
+use Livewire\Attributes\Lazy;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 
+#[Lazy]
 class MyDocuments extends Component
 {
     use WithFileUploads;
@@ -29,6 +31,11 @@ class MyDocuments extends Component
     public function boot(AttendanceDocumentRepositoryInterface $attendanceDocumentRepository)
     {
         $this->attendanceDocumentRepository = $attendanceDocumentRepository;
+    }
+
+    public function placeholder()
+    {
+        return view('livewire.placeholders.my-documents');
     }
 
     public function save()

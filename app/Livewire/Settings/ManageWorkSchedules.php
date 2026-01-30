@@ -8,9 +8,11 @@ use App\Models\WorkSchedule;
 use Flux\Flux;
 use Livewire\Component;
 use Livewire\WithPagination;
+use Livewire\Attributes\Lazy;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 
+#[Lazy]
 class ManageWorkSchedules extends Component
 {
     use AuthorizesRequests;
@@ -49,6 +51,11 @@ class ManageWorkSchedules extends Component
         $this->sortCol = 'name';
         
         $this->perPage = request()->query('per_page', 10);
+    }
+
+    public function placeholder()
+    {
+        return view('livewire.placeholders.manage-work-schedules');
     }
 
     public function updatedSearch() { $this->resetPage(); }

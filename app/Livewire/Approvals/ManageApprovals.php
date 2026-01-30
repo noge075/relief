@@ -11,8 +11,10 @@ use App\Services\LeaveRequestService;
 use Flux\Flux;
 use Livewire\Component;
 use Livewire\WithPagination;
+use Livewire\Attributes\Lazy;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 
+#[Lazy]
 class ManageApprovals extends Component
 {
     use WithPagination;
@@ -52,6 +54,11 @@ class ManageApprovals extends Component
         $this->sortCol = 'start_date';
 
         $this->perPage = request()->query('per_page', 10);
+    }
+
+    public function placeholder()
+    {
+        return view('livewire.placeholders.manage-approvals');
     }
 
     public function updatedSearch(): void

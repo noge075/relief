@@ -10,8 +10,10 @@ use Flux\Flux;
 use Illuminate\Validation\Rule;
 use Livewire\Component;
 use Livewire\WithPagination;
+use Livewire\Attributes\Lazy;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 
+#[Lazy]
 class ManageHomeOfficePolicies extends Component
 {
     use WithPagination;
@@ -42,6 +44,11 @@ class ManageHomeOfficePolicies extends Component
         $this->authorize(PermissionType::MANAGE_HOME_OFFICE_POLICIES->value);
         $this->sortCol = 'name';
         $this->perPage = request()->query('per_page', 10);
+    }
+
+    public function placeholder()
+    {
+        return view('livewire.placeholders.manage-home-office-policies');
     }
 
     public function updatedSearch()

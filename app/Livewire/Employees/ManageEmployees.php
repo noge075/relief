@@ -16,11 +16,13 @@ use App\Models\HomeOfficePolicy;
 use Flux\Flux;
 use Livewire\Component;
 use Livewire\WithPagination;
+use Livewire\Attributes\Lazy;
 use Spatie\Permission\Models\Role;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Livewire\WithFileUploads;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
+#[Lazy]
 class ManageEmployees extends Component
 {
     use WithPagination;
@@ -74,14 +76,21 @@ class ManageEmployees extends Component
         'sortAsc' => ['except' => true],
     ];
 
-    public function mount(RoleService $roleService): void
+    public function mount(): void
     {
+        $roleService = app(RoleService::class);
+
         $this->authorize(PermissionType::VIEW_USERS->value);
         $this->sortCol = 'last_name';
         $this->allPermissions = $roleService->getGroupedPermissions();
         $this->updateRolePermissions();
 
         $this->perPage = request()->query('per_page', 10);
+    }
+
+    public function placeholder()
+    {
+        return view('livewire.placeholders.manage-employees');
     }
 
     public function updatedSearch(): void

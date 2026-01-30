@@ -9,8 +9,10 @@ use Flux\Flux;
 use Livewire\Component;
 use Livewire\WithPagination;
 use Livewire\Attributes\Url;
+use Livewire\Attributes\Lazy;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 
+#[Lazy]
 class ManageDepartments extends Component
 {
     use AuthorizesRequests;
@@ -39,6 +41,11 @@ class ManageDepartments extends Component
         $this->authorize(PermissionType::MANAGE_DEPARTMENTS->value);
         $this->sortCol = 'name';
         $this->perPage = request()->query('per_page', 10);
+    }
+
+    public function placeholder()
+    {
+        return view('livewire.placeholders.manage-departments');
     }
 
     public function updatedSearch() { $this->resetPage(); }
