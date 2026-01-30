@@ -1,4 +1,4 @@
-<flux:modal wire:model="showEditModal" class="min-w-150">
+<flux:modal wire:model="showEditModal" class="w-full sm:w-120">
     <div class="space-y-6">
         <div>
             <flux:heading size="lg">{{ __('Edit Attendance') }}</flux:heading>
@@ -13,8 +13,10 @@
                 </div>
             @endif
 
-            <flux:time-picker interval="15" wire:model="editingCheckIn" type="time" label="{{ __('Check In') }}" />
-            <flux:time-picker interval="15" wire:model="editingCheckOut" type="time" label="{{ __('Check Out') }}" />
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <flux:time-picker interval="15" wire:model="editingCheckIn" type="time" label="{{ __('Check In') }}" />
+                <flux:time-picker interval="15" wire:model="editingCheckOut" type="time" label="{{ __('Check Out') }}" />
+            </div>
         </div>
 
         <div class="flex justify-end gap-2">

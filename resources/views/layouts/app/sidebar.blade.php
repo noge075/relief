@@ -115,26 +115,35 @@
             </flux:sidebar.nav>
         </flux:sidebar>
 
-        <flux:header class="block! bg-white lg:bg-zinc-50 dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-700">
+        <flux:header class="hidden lg:flex items-center bg-white lg:bg-zinc-50 dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-700 px-4">
             <flux:navbar class="w-full justify-end">
-                @persist('notification-bell')
-                    <livewire:notification-center />
-                @endpersist
-                <flux:separator vertical class="my-2" />
-                <flux:radio.group x-data variant="segmented" x-model="$flux.appearance">
-                    <flux:radio value="light" icon="sun"></flux:radio>
-                    <flux:radio value="dark" icon="moon"></flux:radio>
-                </flux:radio.group>
-                <flux:separator vertical class="my-2" />
-                @livewire('user-avatar')
+                <div class="flex items-center gap-x-4">
+                    @persist('notification-bell')
+                        <livewire:notification-center />
+                    @endpersist
+                    <flux:radio.group x-data variant="segmented" x-model="$flux.appearance">
+                        <flux:radio value="light" icon="sun"></flux:radio>
+                        <flux:radio value="dark" icon="moon"></flux:radio>
+                    </flux:radio.group>
+                    @livewire('user-avatar')
+                </div>
             </flux:navbar>
         </flux:header>
 
         <!-- Mobile Header -->
-        <flux:header class="lg:hidden">
+        <flux:header class="flex items-center lg:hidden px-4">
             <flux:sidebar.toggle class="lg:hidden" icon="bars-2" inset="left" />
             <flux:spacer />
-            @livewire('user-avatar')
+            <div class="flex items-center gap-x-4">
+                @persist('notification-bell')
+                    <livewire:notification-center menu-class="origin-top-right right-0" />
+                @endpersist
+                <flux:radio.group x-data variant="segmented" x-model="$flux.appearance">
+                    <flux:radio value="light" icon="sun"></flux:radio>
+                    <flux:radio value="dark" icon="moon"></flux:radio>
+                </flux:radio.group>
+                @livewire('user-avatar')
+            </div>
         </flux:header>
 
         {{ $slot }}

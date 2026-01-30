@@ -1,13 +1,14 @@
 <div class="flex flex-col gap-6">
-    <div class="flex justify-between items-center">
+    <div class="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
         <div>
             <flux:heading size="xl">{{ __('Roles & Permissions') }}</flux:heading>
             <flux:subheading>{{ __('Manage roles and their associated permissions.') }}</flux:subheading>
         </div>
-        <flux:button variant="primary" icon="plus" wire:click="create">{{ __('New Role') }}</flux:button>
+        <flux:button variant="primary" icon="plus" wire:click="create" class="w-full sm:w-auto">
+            {{ __('New Role') }}
+        </flux:button>
     </div>
 
-    <!-- Toolbar -->
     <div class="flex flex-col lg:flex-row gap-4 justify-between items-end bg-white dark:bg-zinc-900 p-4 rounded-xl border border-zinc-200 dark:border-zinc-700 shadow-sm">
         <div class="flex flex-col sm:flex-row gap-4 w-full lg:w-auto items-end">
             <flux:input wire:model.live.debounce.300ms="search" icon="magnifying-glass" placeholder="{{ __('Search by name...') }}" class="w-full sm:w-64" />
@@ -20,7 +21,7 @@
                 <flux:table.column sortable :sorted="$sortCol === 'name'" :direction="$sortAsc ? 'asc' : 'desc'" wire:click="sortBy('name')">
                     {{ __('Name') }}
                 </flux:table.column>
-                <flux:table.column sortable :sorted="$sortCol === 'permissions_count'" :direction="$sortAsc ? 'asc' : 'desc'" wire:click="sortBy('permissions_count')">
+                <flux:table.column class="hidden md:table-cell" sortable :sorted="$sortCol === 'permissions_count'" :direction="$sortAsc ? 'asc' : 'desc'" wire:click="sortBy('permissions_count')">
                     {{ __('Permissions Count') }}
                 </flux:table.column>
                 <flux:table.column>{{ __('Actions') }}</flux:table.column>
@@ -29,17 +30,38 @@
             <flux:table.rows>
                 @foreach($roles as $role)
                     <flux:table.row :key="$role->id">
-                        <flux:table.cell class="font-medium">{{ __($role->name) }}</flux:table.cell>
-                        <flux:table.cell>{{ $role->permissions_count }} {{ __('permissions') }}</flux:table.cell>
                         <flux:table.cell>
-                            <flux:dropdown>
-                                <flux:button variant="ghost" size="sm" icon="ellipsis-horizontal" />
-                                <flux:menu>
-                                    <flux:menu.item wire:click="edit({{ $role->id }})" icon="pencil-square">{{ __('Edit') }}</flux:menu.item>
-                                    <flux:menu.separator />
-                                    <flux:menu.item wire:click="delete({{ $role->id }})" icon="trash" variant="danger">{{ __('Delete') }}</flux:menu.item>
-                                </flux:menu>
-                            </flux:dropdown>
+                            <div class="flex flex-col">
+                                <span class="font-medium text-zinc-900 dark:text-zinc-100">{{ __($role->name) }}</span>
+
+                                <div class="md:hidden mt-1">
+                                    <flux:badge size="xs" color="zinc">{{ $role->permissions_count }} {{ __('permissions') }}</flux:badge>
+                                </div>
+                            </div>
+                        </flux:table.cell>
+
+                        <flux:table.cell class="hidden md:table-cell">
+                            <flux:badge color="zinc">{{ $role->permissions_count }} {{ __('permissions') }}</flux:badge>
+                        </flux:table.cell>
+
+                        <flux:table.cell>
+                            <button
+                                    wire:click="edit({{ $role->id }})"
+                                    class="md:hidden w-10 h-10 flex items-center justify-center rounded-full bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400 active:scale-95 transition-transform"
+                            >
+                                <flux:icon.pencil-square class="size-5" />
+                            </button>
+
+                            <div class="hidden md:block">
+                                <flux:dropdown>
+                                    <flux:button variant="ghost" size="sm" icon="ellipsis-horizontal" />
+                                    <flux:menu>
+                                        <flux:menu.item wire:click="edit({{ $role->id }})" icon="pencil-square">{{ __('Edit') }}</flux:menu.item>
+                                        <flux:menu.separator />
+                                        <flux:menu.item wire:click="delete({{ $role->id }})" icon="trash" variant="danger" wire:confirm="{{ __('Are you sure?') }}">{{ __('Delete') }}</flux:menu.item>
+                                    </flux:menu>
+                                </flux:dropdown>
+                            </div>
                         </flux:table.cell>
                     </flux:table.row>
                 @endforeach
@@ -47,7 +69,7 @@
         </flux:table>
 
         <div class="p-4 border-t border-zinc-200 dark:border-zinc-700 flex flex-col md:flex-row justify-between items-center gap-4">
-            <div class="text-sm text-zinc-500 w-full md:w-1/3">
+            <div class="text-sm text-zinc-500 w-full md:w-1/3 text-center md:text-left">
                 @if($roles->total() > 0)
                     {{ __('Showing') }} <span class="font-medium">{{ $roles->firstItem() }}-{{ $roles->lastItem() }}</span> {{ __('of') }} <span class="font-medium">{{ $roles->total() }}</span> {{ __('results') }}
                 @else

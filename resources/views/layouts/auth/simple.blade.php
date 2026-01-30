@@ -7,7 +7,8 @@
         <div class="w-full max-w-md p-6">
             <div class="flex flex-col items-center gap-6 mb-6">
                 <a href="{{ route('home') }}" wire:navigate>
-                    <img src="{{ asset('img/logo.svg') }}" alt="Logo" class="h-24 w-auto" />
+                    <img src="{{ asset('img/logo.svg') }}" alt="Logo" class="h-24 w-auto block dark:hidden" />
+                    <img src="{{ asset('img/logo_inverse.png') }}" alt="Logo" class="h-24 w-auto hidden dark:block" />
                 </a>
             </div>
 

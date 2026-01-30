@@ -1,12 +1,11 @@
 <div class="flex flex-col gap-6">
-    <div class="flex justify-between items-center">
+    <div class="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
         <div>
             <flux:heading size="xl">{{ __('Organization Chart') }}</flux:heading>
             <flux:subheading>{{ __('Manage the employee hierarchy.') }}</flux:subheading>
         </div>
     </div>
 
-    <!-- Legend -->
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6 p-4 bg-zinc-50 dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-700 text-sm">
         <div>
             <flux:heading size="sm" class="mb-2 text-zinc-500 uppercase tracking-wider font-bold">{{ __('Roles') }}</flux:heading>
@@ -34,17 +33,18 @@
         </div>
     </div>
 
-    <flux:card>
+    <flux:card class="overflow-x-auto">
         @can(\App\Enums\PermissionType::EDIT_USERS->value)
             <div
-                class="space-y-4"
-                x-data="{
+                    class="space-y-4 min-w-75"
+                    x-data="{
                     initSortable(el) {
                         new Sortable(el, {
                             group: 'nested',
                             animation: 150,
                             fallbackOnBody: true,
                             swapThreshold: 0.65,
+                            handle: '.drag-handle', // Javaslat: Adj hozzá egy 'drag-handle' class-t az ikonhoz a node-ban, hogy mobilon könnyebb legyen görgetni a húzás helyett
                             onEnd: (evt) => {
                                 let itemEl = evt.item;
                                 let newParentEl = itemEl.closest('[data-user-id]');
@@ -58,32 +58,31 @@
                         });
                     }
                 }"
-                x-init="initSortable($el)"
+                    x-init="initSortable($el)"
             >
                 @forelse($tree as $rootUser)
                     <div data-id="{{ $rootUser->id }}">
                         <x-org-tree-node :user="$rootUser" />
                     </div>
                 @empty
-                    <p class="text-zinc-500">{{ __('No users found.') }}</p>
+                    <p class="text-zinc-500 text-center py-4">{{ __('No users found.') }}</p>
                 @endforelse
             </div>
         @else
-            <div class="space-y-4">
+            <div class="space-y-4 min-w-75">
                 @forelse($tree as $rootUser)
                     <div data-id="{{ $rootUser->id }}">
                         <x-org-tree-node :user="$rootUser" />
                     </div>
                 @empty
-                    <p class="text-zinc-500">{{ __('No users found.') }}</p>
+                    <p class="text-zinc-500 text-center py-4">{{ __('No users found.') }}</p>
                 @endforelse
             </div>
         @endcan
     </flux:card>
 
     @can(\App\Enums\PermissionType::EDIT_USERS->value)
-        <!-- Edit Modal -->
-        <flux:modal wire:model="showEditModal" class="min-w-100">
+        <flux:modal wire:model="showEditModal" class="w-full sm:w-120">
             <div class="space-y-6">
                 <div>
                     <flux:heading size="lg">{{ __('Edit Manager') }}</flux:heading>
@@ -91,7 +90,7 @@
                 </div>
 
                 <div class="grid gap-4">
-                    <flux:select wire:model="selectedManagerId" label="{{ __('Manager') }}">
+                    <flux:select wire:model="selectedManagerId" label="{{ __('Manager') }}" class="w-full">
                         <flux:select.option value="">{{ __('No Manager') }}</flux:select.option>
                         @foreach($allUsers as $user)
                             @if($user->id !== $selectedUserId)
@@ -101,9 +100,9 @@
                     </flux:select>
                 </div>
 
-                <div class="flex justify-end gap-2">
-                    <flux:button wire:click="$set('showEditModal', false)" variant="ghost">{{ __('Cancel') }}</flux:button>
-                    <flux:button wire:click="saveManager" variant="primary">{{ __('Save') }}</flux:button>
+                <div class="flex flex-col-reverse sm:flex-row justify-end gap-2">
+                    <flux:button wire:click="$set('showEditModal', false)" variant="ghost" class="w-full sm:w-auto">{{ __('Cancel') }}</flux:button>
+                    <flux:button wire:click="saveManager" variant="primary" class="w-full sm:w-auto">{{ __('Save') }}</flux:button>
                 </div>
             </div>
         </flux:modal>

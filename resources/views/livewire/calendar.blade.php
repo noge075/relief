@@ -109,11 +109,24 @@
                             <flux:badge
                                     :color="$color"
                                     size="sm"
-                                    class="w-auto md:w-full justify-center md:justify-start truncate cursor-pointer"
+                                    class="w-auto md:w-full justify-center md:justify-start truncate cursor-pointer gap-1.5"
                                     wire:click.stop="editEvent('{{ $day['event']->id }}')"
                             >
-                                <span class="mr-1">{{ $type == 'vacation' ? '🏖️' : ($type == 'home_office' ? '🏠' : '💊') }}</span>
-                                <span class="hidden sm:inline">{{ $label }}</span> @if($isPending) <span class="ml-1 text-[9px] opacity-70">({{ __('Pending') }})</span> @endif
+                                @php
+                                    $iconName = match($type) {
+                                        'vacation' => 'sun',
+                                        'home_office' => 'home',
+                                        default => 'plus'
+                                    };
+                                @endphp
+
+                                <flux:icon :name="$iconName" class="size-3.5 shrink-0 opacity-70" />
+
+                                <span class="hidden sm:inline truncate">{{ $label }}</span>
+
+                                @if($isPending)
+                                    <span class="ml-1 text-[9px] opacity-70">({{ __('Pending') }})</span>
+                                @endif
                             </flux:badge>
                         @endif
                     </div>
