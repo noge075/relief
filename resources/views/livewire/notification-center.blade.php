@@ -12,7 +12,7 @@
         @endif
     </button>
 
-    <div x-show="open" @click.outside="open = false" style="display: none;" class="absolute right-0 mt-2 w-80 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg shadow-lg z-50">
+    <div x-show="open" @click.outside="open = false" style="display: none;" class="fixed inset-x-4 top-16 rounded-lg sm:absolute sm:w-80 sm:right-0 sm:left-auto sm:top-auto sm:mt-2 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 shadow-lg z-50">
         <div class="p-4 flex justify-between items-center border-b dark:border-zinc-700">
             <flux:heading size="sm">{{ __('Notifications') }}</flux:heading>
             @if($unreadNotifications->count() > 0)

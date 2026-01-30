@@ -111,6 +111,12 @@ class ManageRoles extends Component
     {
         $this->authorize(PermissionType::MANAGE_SETTINGS->value);
         $this->roleService->deleteRole($id);
+
+        $this->showModal = false;
+        $this->isEditing = false;
+        $this->editingId = null;
+        $this->reset(['name', 'selectedPermissions']);
+
         Flux::toast(__('Role deleted.'), variant: 'danger');
     }
 

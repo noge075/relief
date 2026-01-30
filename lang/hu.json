@@ -163,6 +163,7 @@
     "Allowance": "Keret",
     "Used": "Felhasznált",
     "Remaining": "Maradék",
+    "remaining": "maradék",
     "Edit Balance": "Keret szerkesztése",
     "Manually adjust used days if necessary.": "A felhasznált napok kézi módosítása, ha szükséges.",
     "Leave balance updated successfully.": "Szabadságkeret sikeresen frissítve.",
