@@ -80,9 +80,15 @@
 
 @layer theme {
     .dark {
-        --color-accent: var(--color-brand-blue);
+        --color-accent: var(--color-brand-sky);
         --color-accent-content: #ffffff;
         --color-accent-foreground: #ffffff;
+
+        --color-blue-50: var(--color-cyan-50);
+        --color-blue-100: var(--color-cyan-100);
+        --color-blue-400: var(--color-cyan-400);
+        --color-blue-500: var(--color-cyan-500);
+        --color-blue-600: var(--color-cyan-600);
     }
 }
 
@@ -101,7 +107,7 @@
 }
 
 [data-flux-label] {
-    @apply  !mb-0 !leading-tight;
+    @apply  mb-0! leading-tight!;
 }
 
 input:focus[data-flux-control],
@@ -131,6 +137,11 @@ select:focus[data-flux-control] {
 [data-flux-table] td {
     padding-left: 1.5rem !important;
     padding-right: 1.5rem !important;
+}
+
+.dark [data-flux-button][data-variant='primary']:hover {
+    background-color: var(--color-brand-sky) !important;
+    opacity: 0.8;
 }
 
 /* Trix Editor list styles */

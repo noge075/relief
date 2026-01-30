@@ -49,7 +49,7 @@
                                             @php
                                                 $key = strtolower($day);
                                                 $hours = $schedule->weekly_pattern[$key] ?? 0;
-                                                $color = $hours > 0 ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' : 'bg-zinc-100 text-zinc-400 dark:bg-zinc-800 dark:text-zinc-600';
+                                                $color = $hours > 0 ? 'bg-blue-100 text-blue-700 dark:bg-cyan-500/20 dark:text-cyan-400' : 'bg-zinc-100 text-zinc-400 dark:bg-zinc-800 dark:text-zinc-600';
                                             @endphp
                                             <div class="w-5 h-5 rounded flex items-center justify-center text-[10px] font-medium {{ $color }}">
                                                 {{ substr(__($day), 0, 1) }}
@@ -76,7 +76,7 @@
                                     @php
                                         $key = strtolower($day);
                                         $hours = $schedule->weekly_pattern[$key] ?? 0;
-                                        $color = $hours > 0 ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' : 'bg-zinc-100 text-zinc-400 dark:bg-zinc-800 dark:text-zinc-600';
+                                        $color = $hours > 0 ? 'bg-blue-100 text-blue-700 dark:bg-cyan-500/20 dark:text-cyan-400' : 'bg-zinc-100 text-zinc-400 dark:bg-zinc-800 dark:text-zinc-600';
                                     @endphp
                                     <div class="w-6 h-6 rounded flex items-center justify-center text-xs font-medium {{ $color }}" title="{{ __($day) }}: {{ $hours }}h">
                                         {{ substr(__($day), 0, 1) }}

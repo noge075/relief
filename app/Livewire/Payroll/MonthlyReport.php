@@ -11,9 +11,11 @@ use Livewire\Attributes\Title;
 use Livewire\Component;
 use Livewire\WithPagination;
 use Livewire\Attributes\Url;
+use Livewire\Attributes\Lazy;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Maatwebsite\Excel\Facades\Excel;
 
+#[Lazy]
 class MonthlyReport extends Component
 {
     use AuthorizesRequests;
@@ -42,6 +44,11 @@ class MonthlyReport extends Component
         $this->month = request()->query('month', Carbon::now()->month);
         $this->perPage = request()->query('perPage', 5);
         $this->loadClosureStatus();
+    }
+
+    public function placeholder()
+    {
+        return view('livewire.placeholders.monthly-report');
     }
 
     public function updatedYear(): void

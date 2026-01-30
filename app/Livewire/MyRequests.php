@@ -10,9 +10,11 @@ use Livewire\Component;
 use Livewire\WithPagination;
 use Livewire\WithFileUploads;
 use Livewire\Attributes\Url;
+use Livewire\Attributes\Lazy;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
+#[Lazy]
 class MyRequests extends Component
 {
     use AuthorizesRequests;
@@ -43,6 +45,11 @@ class MyRequests extends Component
     public function mount()
     {
         $this->perPage = request()->query('per_page', 10);
+    }
+
+    public function placeholder()
+    {
+        return view('livewire.placeholders.my-requests');
     }
 
     public function updatedStatusFilter() { $this->resetPage(); }

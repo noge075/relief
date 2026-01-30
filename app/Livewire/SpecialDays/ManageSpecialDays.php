@@ -9,9 +9,11 @@ use Carbon\Carbon;
 use Flux\Flux;
 use Livewire\Component;
 use Livewire\WithPagination;
+use Livewire\Attributes\Lazy;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 
+#[Lazy]
 class ManageSpecialDays extends Component
 {
     use AuthorizesRequests;
@@ -57,6 +59,11 @@ class ManageSpecialDays extends Component
         $this->sortCol = 'date';
         
         $this->perPage = request()->query('per_page', 10);
+    }
+
+    public function placeholder()
+    {
+        return view('livewire.placeholders.manage-special-days');
     }
 
     public function updatedYear()

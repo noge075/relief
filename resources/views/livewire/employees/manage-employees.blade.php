@@ -216,7 +216,6 @@
                             @endif
                         </flux:table.cell>
                         <flux:table.cell>
-                            {{-- MOBIL GOMB: Nagy kerek szerkesztés gomb --}}
                             @can(\App\Enums\PermissionType::EDIT_USERS->value)
                                 <button
                                         wire:click="openEdit({{ $user->id }})"
@@ -226,7 +225,6 @@
                                 </button>
                             @endcan
 
-                            {{-- DESKTOP MENÜ --}}
                             <div class="hidden md:block">
                                 <flux:dropdown>
                                     <flux:button variant="ghost" size="sm" icon="ellipsis-horizontal"/>

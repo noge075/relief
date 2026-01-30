@@ -8,10 +8,12 @@ use App\Services\RoleService;
 use Flux\Flux;
 use Livewire\Component;
 use Livewire\WithPagination;
+use Livewire\Attributes\Lazy;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 
+#[Lazy]
 class ManageRoles extends Component
 {
     use WithPagination;
@@ -47,6 +49,11 @@ class ManageRoles extends Component
         $this->authorize(PermissionType::MANAGE_SETTINGS->value);
         $this->sortCol = 'name';
         $this->permissions = $this->roleService->getGroupedPermissions();
+    }
+
+    public function placeholder()
+    {
+        return view('livewire.placeholders.manage-roles');
     }
 
     public function updatedSearch(): void

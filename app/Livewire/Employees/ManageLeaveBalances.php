@@ -12,8 +12,10 @@ use Carbon\Carbon;
 use Flux\Flux;
 use Livewire\Component;
 use Livewire\WithPagination;
+use Livewire\Attributes\Lazy;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 
+#[Lazy]
 class ManageLeaveBalances extends Component
 {
     use WithPagination;
@@ -66,6 +68,11 @@ class ManageLeaveBalances extends Component
         
         $currentYear = Carbon::now()->year;
         $this->availableYears = [$currentYear, $currentYear + 1];
+    }
+
+    public function placeholder()
+    {
+        return view('livewire.placeholders.manage-leave-balances');
     }
 
     public function updatedSearch(): void

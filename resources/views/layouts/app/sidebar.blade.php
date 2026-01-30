@@ -118,8 +118,10 @@
         <flux:header class="hidden lg:flex items-center bg-white lg:bg-zinc-50 dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-700 px-4">
             <flux:navbar class="w-full justify-end">
                 <div class="flex items-center gap-x-4">
-                    @persist('notification-bell')
-                        <livewire:notification-center />
+                    @persist('notification-bell-desktop')
+                        <div class="relative">
+                            <livewire:notification-center menu-class="origin-top-right right-0 w-96 max-w-[90vw]" />
+                        </div>
                     @endpersist
                     <flux:radio.group x-data variant="segmented" x-model="$flux.appearance">
                         <flux:radio value="light" icon="sun"></flux:radio>
@@ -135,8 +137,10 @@
             <flux:sidebar.toggle class="lg:hidden" icon="bars-2" inset="left" />
             <flux:spacer />
             <div class="flex items-center gap-x-4">
-                @persist('notification-bell')
-                    <livewire:notification-center menu-class="origin-top-right right-0" />
+                @persist('notification-bell-mobile')
+                    <div class="relative">
+                        <livewire:notification-center menu-class="origin-top-right absolute right-0 mt-2 w-96 max-w-[90vw] rounded-md shadow-lg bg-white dark:bg-zinc-800 ring-1 ring-black ring-opacity-5 focus:outline-none" />
+                    </div>
                 @endpersist
                 <flux:radio.group x-data variant="segmented" x-model="$flux.appearance">
                     <flux:radio value="light" icon="sun"></flux:radio>

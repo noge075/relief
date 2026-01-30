@@ -6,7 +6,7 @@
         <flux:icon name="bell" class="w-5 h-5 text-zinc-500 dark:text-zinc-300" />
 
         @if($unreadNotifications->count() > 0)
-            <span class="absolute -top-1 -right-1 inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1.5 text-xs font-bold leading-none text-red-100 bg-red-600 rounded-full border-2 border-white dark:border-zinc-800">
+            <span class="absolute -top-1 -right-1 inline-flex items-center justify-center min-w-5 h-5 px-1.5 text-xs font-bold leading-none text-red-100 bg-red-600 rounded-full border-2 border-white dark:border-zinc-800">
                 {{ $unreadNotifications->count() }}
             </span>
         @endif
